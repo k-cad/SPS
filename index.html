@@ -1,553 +1,310 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ecowitt Dashboard</title>
-<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #ffffff; /* Matplotlib default white */
-    color: #222;
-    min-height: 100vh;
-  }
-
-  /* ── Figure Title ── */
-  #main-title {
-    text-align: center;
-    font-size: 1.1rem;
-    font-weight: bold;
-    padding: 16px 0 8px;
-    color: #000;
-  }
-
-  #loading {
-    display: flex; align-items: center; justify-content: center;
-    height: 60vh; font-size: 1.1rem; color: #666;
-    flex-direction: column; gap: 12px;
-  }
-  
-  .spinner {
-    width: 36px; height: 36px;
-    border: 4px solid #ddd; border-top-color: #1f77b4;
-    border-radius: 50%; animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  #dashboard { display: none; max-width: 1500px; margin: 0 auto; }
-
-  /* ── Main layout: charts left, sidebar right ── */
-  #main-layout {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-    padding: 0 16px;
-  }
-
-  #charts-col {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  #sidebar {
-    width: 260px;
-    flex-shrink: 0;
-    padding-top: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  /* ── Chart cards (Removed shadows to match plot style) ── */
-  .chart-card {
-    background: white;
-  }
-  .chart-title {
-    padding-left: 50px;
-    font-size: 0.85rem; 
-    font-weight: bold;
-    color: #000; 
-  }
-
-  /* ── Calendar ── */
-  #cal-wrap {
-    background: white;
-    padding: 10px 8px;
-  }
-  #cal-month-nav {
-    display: flex; align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-  #cal-month-label {
-    font-weight: bold; font-size: 0.95rem;
-    color: #222; text-align: center; flex: 1;
-  }
-  .cal-nav {
-    background: none; border: none;
-    font-size: 1rem; cursor: pointer;
-    color: #1f77b4; padding: 2px 6px;
-  }
-  .cal-nav:hover { color: #0a3d6b; }
-  
-  #cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-  }
-  .cal-dow {
-    text-align: center; font-size: 0.75rem;
-    font-weight: bold; color: #555; padding: 4px 0;
-  }
-  .cal-day {
-    text-align: center; padding: 6px 2px;
-    border-radius: 4px; font-size: 0.8rem;
-    background: #f0f0f0; color: #bbb;
-    cursor: default; user-select: none;
-    border: 1px solid #e0e0e0;
-  }
-  .cal-day.has-data {
-    background: #cce5ff; color: #003366;
-    font-weight: bold; cursor: pointer;
-    border-color: #b3d4f5;
-  }
-  .cal-day.has-data:hover { background: #99caff; }
-  .cal-day.selected { background: #1f77b4 !important; color: white !important; border-color: #1a6296 !important; }
-  .cal-day.empty { background: transparent; color: transparent; border: none; }
-
-  /* ── Nav controls (Moved under calendar) ── */
-  #controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 8px;
-  }
-  .nav-btn {
-    padding: 6px 12px;
-    border: 1px solid #aaa;
-    background: #f0f0f0; color: #333;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  .nav-btn:hover { background: #e0e0e0; }
-  .nav-btn:disabled { opacity: 0.4; cursor: default; }
-  
-  #day-label {
-    flex: 1; text-align: center;
-    font-size: 0.85rem; font-weight: bold; color: #000;
-  }
-
-  @media (max-width: 900px) {
-    #main-layout { flex-direction: column; }
-    #sidebar { width: 100%; max-width: 400px; margin: 0 auto; }
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telemetry Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f4f7f6; 
+            color: #2c3e50; 
+        }
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            background: white; 
+            padding: 15px 25px; 
+            border-radius: 6px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        }
+        .nav-btn { 
+            background: #2c3e50; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            transition: background 0.2s;
+        }
+        .nav-btn:hover { background: #34495e; }
+        .nav-btn:disabled { background: #bdc3c7; cursor: not-allowed; }
+        #dateDisplay { font-size: 1.25em; font-weight: bold; letter-spacing: 0.5px; }
+        .chart-container { 
+            background: white; 
+            border-radius: 6px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+            padding: 20px; 
+            margin-bottom: 20px; 
+        }
+        #status {
+            text-align: center;
+            font-weight: bold;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        .error { color: #e74c3c !important; }
+    </style>
 </head>
 <body>
 
-<div id="loading">
-  <div class="spinner"></div>
-  <div>Fetching data from Google Sheets…</div>
-</div>
-
-<div id="dashboard">
-  <div id="main-title">Ecowitt Dashboard</div>
-
-  <div id="main-layout">
-    <div id="charts-col">
-      <div class="chart-card">
-        <div class="chart-title">Temperatures</div>
-        <div id="chart-temp"></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">Solar Radiation &amp; UV Index</div>
-        <div id="chart-solar"></div>
-      </div>
+    <div class="header">
+        <button class="nav-btn" id="prevBtn" onclick="stepDay(-1)" disabled>&#8592; Previous</button>
+        <div id="dateDisplay">Loading Telemetry...</div>
+        <button class="nav-btn" id="nextBtn" onclick="stepDay(1)" disabled>Next &#8594;</button>
     </div>
 
-    <div id="sidebar">
-      <div id="cal-wrap">
-        <div id="cal-month-nav">
-          <div id="cal-month-label"></div>
-        </div>
-        <div id="cal-grid"></div>
-      </div>
-      
-      <div id="controls">
-        <button class="nav-btn" id="btn-prev" onclick="stepDay(-1)">◀ Prev</button>
-        <div id="day-label">—</div>
-        <button class="nav-btn" id="btn-next" onclick="stepDay(1)">Next ▶</button>
-      </div>
+    <div id="status">Fetching data from Google Sheets...</div>
+
+    <div class="chart-container">
+        <div id="mainChart"></div>
     </div>
-  </div>
-</div>
 
-<script>
-// ─────────────────────────────────────────────
-// CONFIG
-// ─────────────────────────────────────────────
-const SPREADSHEET_ID = "1Ru8OhlbwrGnCcVc-EbtakgnzVRNlTuBzTCNGd9g4IbU";
-const TAB_NAME       = "Ecowitt Data";
-const SMOOTH_WINDOW  = 60;
+    <script>
+        // ─────────────────────────────────────────────
+        // CONFIGURATION - UPDATE THESE VALUES
+        // ─────────────────────────────────────────────
+        const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE"; 
+        const TAB_NAME = "Sheet1"; // Update if your tab is named differently
+        const SMOOTH_WINDOW = 15;  // Number of data points for the rolling average
 
-const COL = {
-  timestamp:  "Timestamp (Local)",
-  temp_spa:   "Spa Temp (F)",
-  temp_pool:  "Pool Temp (F)",
-  temp_nosun: "Water No Sun (F)",
-  temp_out:   "Outdoor Temp (°F)",
-  solar:      "Solar Radiation (W/m²)",
-  uv:         "UV Index",
-};
+        // Map your EXACT Google Sheet column headers here
+        const COL = {
+            timestamp: "Timestamp", // The column containing the date/time string
+            poolTemp: "Pool Temp",  // Replace with exact header
+            spaTemp: "Spa Temp",    // Replace with exact header
+            airTemp: "Air Temp"     // Replace with exact header
+        };
 
-const TEMP_SERIES = [
-  { label: "Spa Temp",     key: "temp_spa",   color: "#d62728", lw: 2.2 },
-  { label: "Pool Temp",    key: "temp_pool",  color: "#1f77b4", lw: 2.2 },
-  { label: "Water No Sun", key: "temp_nosun", color: "#17becf", lw: 2.2 },
-  { label: "Outdoor Temp", key: "temp_out",   color: "#e6a817", lw: 1.8 },
-];
+        // UI Configuration for the traces
+        const TRACE_CONFIG = {
+            poolTemp: { name: 'Pool', color: '#3498db' },
+            spaTemp:  { name: 'Spa', color: '#e74c3c' },
+            airTemp:  { name: 'Air', color: '#95a5a6' }
+        };
 
-const MONTH_NAMES = ["January","February","March","April","May","June",
-                     "July","August","September","October","November","December"];
-const DAY_NAMES = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+        // ─────────────────────────────────────────────
+        // STATE VARIABLES
+        // ─────────────────────────────────────────────
+        let smoothedByDate = {};
+        let allDates = [];
+        let dayIdx = 0;
 
-// ─────────────────────────────────────────────
-// STATE
-// ─────────────────────────────────────────────
-let smoothedByDate = {};
-let allDates       = [];
-let dayIdx         = 0;
-let calYear        = 0;
-let calMonth       = 0;
+        // ─────────────────────────────────────────────
+        // UTILS
+        // ─────────────────────────────────────────────
+        function parseCSV(text) {
+            const lines = text.trim().split("\n");
+            const headers = lines[0].split(",").map(h => h.replace(/^"|"$/g, "").trim());
+            return lines.slice(1).map(line => {
+                const cols = [];
+                let cur = "", inQ = false;
+                for (const ch of line) {
+                    if (ch === '"') { inQ = !inQ; }
+                    else if (ch === ',' && !inQ) { cols.push(cur); cur = ""; }
+                    else { cur += ch; }
+                }
+                cols.push(cur);
+                const obj = {};
+                headers.forEach((h, i) => { obj[h] = (cols[i] || "").replace(/^"|"$/g, "").trim(); });
+                return obj;
+            });
+        }
 
-// ─────────────────────────────────────────────
-// UTILS
-// ─────────────────────────────────────────────
-function parseCSV(text) {
-  const lines = text.trim().split("\n");
-  const headers = lines[0].split(",").map(h => h.replace(/^"|"$/g, "").trim());
-  return lines.slice(1).map(line => {
-    const cols = [];
-    let cur = "", inQ = false;
-    for (const ch of line) {
-      if (ch === '"') { inQ = !inQ; }
-      else if (ch === ',' && !inQ) { cols.push(cur); cur = ""; }
-      else { cur += ch; }
-    }
-    cols.push(cur);
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = (cols[i] || "").replace(/^"|"$/g, "").trim(); });
-    return obj;
-  });
-}
+        function parseNaiveDateTime(ts) {
+            if (!ts) return null;
+            ts = ts.replace(/^"|"$/g, "").trim();
+            
+            // Handles typical Sheets formats: "6/12/2026 17:05:00" or "2026-06-12 17:05"
+            const match = ts.match(/(\d+)[-\/](\d+)[-\/](\d+)[ T](\d+):(\d+):?(\d+)?(?:\s*(AM|PM|am|pm))?/);
+            if (!match) return null;
 
-function toTimeFloat(dateStr) {
-  const d = new Date(dateStr);
-  if (isNaN(d)) return null;
-  return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
-}
+            let p1 = match[1], p2 = match[2], p3 = match[3];
+            let year, month, day;
+            
+            if (p1.length === 4) {
+                year = p1; month = p2; day = p3;
+            } else {
+                month = p1; day = p2; year = p3;
+            }
 
-function toDateStr(dateStr) {
-  const d = new Date(dateStr);
-  if (isNaN(d)) return null;
-  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0');
-}
+            let h = parseInt(match[4], 10);
+            let m = parseInt(match[5], 10);
+            let s = parseInt(match[6] || 0, 10);
+            let ampm = match[7] ? match[7].toUpperCase() : null;
 
-function rollingMean(arr, w) {
-  const half = Math.floor(w / 2);
-  return arr.map((_, i) => {
-    const start = Math.max(0, i - half);
-    const end   = Math.min(arr.length, i + half + 1);
-    const slice = arr.slice(start, end).filter(v => v !== null && !isNaN(v));
-    return slice.length ? slice.reduce((a, b) => a + b, 0) / slice.length : null;
-  });
-}
+            if (ampm === "PM" && h < 12) h += 12;
+            if (ampm === "AM" && h === 12) h = 0;
 
-const X_TICKS      = [0,2,4,6,8,10,12,14,16,18,20,22,24];
-const X_TICK_TEXTS = X_TICKS.map(h => String(Math.floor(h)).padStart(2,"0") + ":00");
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const timeFloat = h + (m / 60) + (s / 3600);
+            const sortKey = `${dateStr}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 
-function baseLayout(yTitle, y2Title, y2Color, showXLabels) {
-  const layout = {
-    margin: { t: 5, b: showXLabels ? 40 : 15, l: 50, r: y2Title ? 50 : 15 },
-    xaxis: {
-      range: [0, 24],
-      tickvals: X_TICKS,
-      ticktext: showXLabels ? X_TICK_TEXTS : X_TICKS.map(()=>""),
-      tickfont: { size: 10 },
-      title: showXLabels ? { text: "Time of Day", font: { size: 11, weight: 'bold' } } : null,
-      showgrid: true, gridcolor: "#eee", gridwidth: 1, griddash: "dot"
-    },
-    yaxis: {
-      title: { text: yTitle, font: { size: 11, weight: 'bold' } },
-      showgrid: true, gridcolor: "#eee", gridwidth: 1, griddash: "dot", zeroline: false,
-    },
-    legend: {
-      orientation: "v",
-      y: 0.98, x: 0.01,
-      xanchor: "left", yanchor: "top",
-      font: { size: 10 },
-      bgcolor: "rgba(255,255,255,0.85)",
-      bordercolor: "#ccc", borderwidth: 1
-    },
-    plot_bgcolor: "white",
-    paper_bgcolor: "white",
-    height: 320,
-    hovermode: "x unified",
-  };
-  
-  if (y2Title) {
-    layout.yaxis2 = {
-      title: { text: y2Title, font: { size: 11, color: y2Color, weight: 'bold' } },
-      overlaying: "y", side: "right",
-      showgrid: false, zeroline: false,
-      tickfont: { color: y2Color, size: 10 },
-    };
-  }
-  return layout;
-}
+            return { dateStr, timeFloat, sortKey };
+        }
 
-// ─────────────────────────────────────────────
-// FETCH & PRE-COMPUTE SMOOTHED DATA PER DAY
-// ─────────────────────────────────────────────
-async function fetchData() {
-  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(TAB_NAME)}`;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  const rows = parseCSV(await resp.text());
+        function rollingMean(arr, w) {
+            const half = Math.floor(w / 2);
+            return arr.map((_, i) => {
+                const start = Math.max(0, i - half);
+                const end   = Math.min(arr.length, i + half + 1);
+                const slice = arr.slice(start, end).filter(v => v !== null && !isNaN(v));
+                return slice.length ? slice.reduce((a, b) => a + b, 0) / slice.length : null;
+            });
+        }
 
-  const byDate = {};
-  rows.forEach(row => {
-    const ds = toDateStr(row[COL.timestamp]);
-    if (!ds) return;
-    if (!byDate[ds]) byDate[ds] = [];
-    byDate[ds].push(row);
-  });
+        const X_TICKS = [0,2,4,6,8,10,12,14,16,18,20,22,24];
+        const X_TICK_TEXTS = X_TICKS.map(h => String(Math.floor(h)).padStart(2,"0") + ":00");
 
-  const allKeys = [...Object.keys(COL).filter(k => k !== "timestamp")];
-  Object.entries(byDate).forEach(([ds, dayRows]) => {
-    dayRows.sort((a, b) => new Date(a[COL.timestamp]) - new Date(b[COL.timestamp]));
-    smoothedByDate[ds] = {};
-    allKeys.forEach(key => {
-      const colName = COL[key];
-      const x = [], y = [];
-      dayRows.forEach(r => {
-        const t = toTimeFloat(r[COL.timestamp]);
-        const v = parseFloat(r[colName]);
-        if (t !== null && !isNaN(v)) { x.push(t); y.push(v); }
-      });
-      const ySm = rollingMean(y, SMOOTH_WINDOW);
-      smoothedByDate[ds][key] = { x, y, ySm };
-    });
-  });
+        function baseLayout(yTitle, showXLabels) {
+            return {
+                margin: { t: 20, b: showXLabels ? 40 : 15, l: 50, r: 20 },
+                xaxis: {
+                    range: [0, 24],
+                    tickvals: X_TICKS,
+                    ticktext: showXLabels ? X_TICK_TEXTS : X_TICKS.map(()=>""),
+                    tickfont: { size: 11 },
+                    title: showXLabels ? { text: "Time of Day", font: { size: 12, weight: 'bold' } } : null,
+                    showgrid: true, gridcolor: "#e0e0e0", gridwidth: 1, griddash: "dot"
+                },
+                yaxis: {
+                    title: { text: yTitle, font: { size: 12, weight: 'bold' } },
+                    showgrid: true, gridcolor: "#e0e0e0", gridwidth: 1, griddash: "dot", zeroline: false,
+                },
+                legend: {
+                    orientation: "h", y: 1.1, x: 0.5,
+                    xanchor: "center", yanchor: "bottom",
+                    font: { size: 12 }
+                },
+                plot_bgcolor: "white", paper_bgcolor: "white",
+                height: 450, hovermode: "x unified"
+            };
+        }
 
-  allDates = Object.keys(smoothedByDate).sort();
-  dayIdx   = allDates.length - 1;
+        // ─────────────────────────────────────────────
+        // FETCH & PRE-COMPUTE DATA
+        // ─────────────────────────────────────────────
+        async function fetchData() {
+            try {
+                const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(TAB_NAME)}`;
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const rows = parseCSV(await resp.text());
 
-  const latest = new Date(allDates[allDates.length - 1]);
-  calYear  = latest.getFullYear();
-  calMonth = latest.getMonth();
-}
+                const byDate = {};
+                
+                rows.forEach(row => {
+                    const parsed = parseNaiveDateTime(row[COL.timestamp]);
+                    if (!parsed) return;
+                    
+                    row._dateStr = parsed.dateStr;
+                    row._timeFloat = parsed.timeFloat;
+                    row._sortKey = parsed.sortKey;
 
-// ─────────────────────────────────────────────
-// BUILD TRACES 
-// ─────────────────────────────────────────────
-function tempTracesForDate(dateStr, faint) {
-  const data = smoothedByDate[dateStr];
-  if (!data) return [];
-  const traces = [];
+                    if (!byDate[parsed.dateStr]) byDate[parsed.dateStr] = [];
+                    byDate[parsed.dateStr].push(row);
+                });
 
-  TEMP_SERIES.forEach(s => {
-    const d = data[s.key];
-    if (!d || !d.x.length) return;
-    
-    // Add Raw trace (faint)
-    traces.push({
-      x: d.x, y: d.y,
-      mode: "lines",
-      line: { color: s.color, width: Math.max(s.lw - 0.8, 0.4) },
-      opacity: faint ? 0.05 : 0.15,
-      showlegend: false,
-      hoverinfo: "skip"
-    });
+                const allKeys = Object.keys(COL).filter(k => k !== "timestamp");
+                Object.entries(byDate).forEach(([ds, dayRows]) => {
+                    // Sort natively by ISO string representation to fix out-of-order rows
+                    dayRows.sort((a, b) => a._sortKey.localeCompare(b._sortKey));
+                    
+                    smoothedByDate[ds] = {};
+                    allKeys.forEach(key => {
+                        const colName = COL[key];
+                        const x = [], y = [];
+                        dayRows.forEach(r => {
+                            const t = r._timeFloat;
+                            const v = parseFloat(r[colName]);
+                            if (t !== null && !isNaN(v)) { x.push(t); y.push(v); }
+                        });
+                        const ySm = rollingMean(y, SMOOTH_WINDOW);
+                        smoothedByDate[ds][key] = { x, y, ySm };
+                    });
+                });
 
-    // Add Smoothed trace
-    traces.push({
-      x: d.x, y: d.ySm,
-      mode: "lines",
-      line: { color: s.color, width: faint ? 1.4 : s.lw, dash: faint ? "dot" : "solid" },
-      opacity: faint ? 0.4 : 1.0,
-      name: s.label + (faint ? " (prev)" : ""),
-      showlegend: !faint
-    });
-  });
-  return traces;
-}
+                allDates = Object.keys(smoothedByDate).sort();
+                if (allDates.length === 0) throw new Error("No valid dates found in data.");
+                
+                dayIdx = allDates.length - 1; // Default to most recent day
+                document.getElementById("status").style.display = "none";
+                renderCharts();
 
-function solarTracesForDate(dateStr, faint) {
-  const data = smoothedByDate[dateStr];
-  if (!data) return [];
-  const traces = [];
+            } catch (err) {
+                console.error("Data fetch error:", err);
+                const statusEl = document.getElementById("status");
+                statusEl.innerText = "Error loading data. Check console and ensure Spreadsheet ID is correct and public.";
+                statusEl.className = "error";
+            }
+        }
 
-  const ds = data["solar"];
-  const du = data["uv"];
+        // ─────────────────────────────────────────────
+        // RENDER & NAVIGATION
+        // ─────────────────────────────────────────────
+        function renderCharts() {
+            if (allDates.length === 0) return;
+            
+            const currentDate = allDates[dayIdx];
+            const data = smoothedByDate[currentDate];
 
-  if (ds && ds.x.length) {
-    traces.push({
-      x: ds.x, y: ds.y, mode: "lines",
-      line: { color: "#f4a500", width: 1.0 }, opacity: faint ? 0.05 : 0.15,
-      showlegend: false, hoverinfo: "skip", yaxis: "y"
-    });
-    traces.push({
-      x: ds.x, y: ds.ySm, mode: "lines",
-      line: { color: "#f4a500", width: faint ? 1.4 : 1.8, dash: faint ? "dot" : "solid" },
-      opacity: faint ? 0.4 : 1.0, name: "Solar (W/m²)" + (faint ? " (prev)" : ""),
-      showlegend: !faint, yaxis: "y"
-    });
-  }
-  if (du && du.x.length) {
-    traces.push({
-      x: du.x, y: du.y, mode: "lines",
-      line: { color: "#b44fd4", width: 0.8 }, opacity: faint ? 0.05 : 0.15,
-      showlegend: false, hoverinfo: "skip", yaxis: "y2"
-    });
-    traces.push({
-      x: du.x, y: du.ySm, mode: "lines",
-      line: { color: "#b44fd4", width: faint ? 1.2 : 1.6, dash: faint ? "dot" : "dash" },
-      opacity: faint ? 0.4 : 1.0, name: "UV Index" + (faint ? " (prev)" : ""),
-      showlegend: !faint, yaxis: "y2"
-    });
-  }
-  return traces;
-}
+            // Update UI
+            document.getElementById("dateDisplay").innerText = currentDate;
+            document.getElementById("prevBtn").disabled = dayIdx === 0;
+            document.getElementById("nextBtn").disabled = dayIdx === allDates.length - 1;
 
-// ─────────────────────────────────────────────
-// RENDER
-// ─────────────────────────────────────────────
-function renderCharts() {
-  const currDate = allDates[dayIdx];
-  const prevDate = dayIdx > 0 ? allDates[dayIdx - 1] : null;
+            const traces = [];
+            const keysToRender = Object.keys(COL).filter(k => k !== "timestamp");
 
-  // Title Logic
-  let titleStr = `Ecowitt Dashboard  —  ${currDate}`;
-  if (prevDate) titleStr += `  |  faint = ${prevDate}`;
-  document.getElementById("main-title").innerHTML = titleStr;
+            keysToRender.forEach(key => {
+                if (!data[key] || data[key].x.length === 0) return;
+                
+                const config = TRACE_CONFIG[key] || { name: key, color: '#333' };
 
-  // Temp chart
-  const tempTraces = [];
-  if (prevDate) tempTraces.push(...tempTracesForDate(prevDate, true));
-  tempTraces.push(...tempTracesForDate(currDate, false));
-  Plotly.react("chart-temp", tempTraces, baseLayout("°F", null, null, false), { responsive: true, displayModeBar: false });
+                // Raw Scatter Points (Low opacity)
+                traces.push({
+                    x: data[key].x,
+                    y: data[key].y,
+                    mode: 'markers',
+                    type: 'scatter',
+                    name: `${config.name} (Raw)`,
+                    marker: { color: config.color, size: 4, opacity: 0.15 },
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                });
 
-  // Solar chart
-  const solarTraces = [];
-  if (prevDate) solarTraces.push(...solarTracesForDate(prevDate, true));
-  solarTraces.push(...solarTracesForDate(currDate, false));
-  
-  // Dummy trace to match Matplotlib's "Previous day (faint)" legend entry
-  if (prevDate) {
-    solarTraces.push({
-      x: [null], y: [null], mode: 'lines',
-      line: {color: '#888888', width: 1.2, dash: 'solid'}, opacity: 0.4,
-      name: 'Previous day (faint)', showlegend: true
-    });
-  }
-  
-  Plotly.react("chart-solar", solarTraces, baseLayout("W/m²", "UV Index", "#b44fd4", true), { responsive: true, displayModeBar: false });
+                // Smoothed Line
+                traces.push({
+                    x: data[key].x,
+                    y: data[key].ySm,
+                    mode: 'lines',
+                    type: 'scatter',
+                    name: config.name,
+                    line: { color: config.color, width: 3 },
+                    hovertemplate: '%{y:.1f}°<extra></extra>'
+                });
+            });
 
-  // UI updates
-  document.getElementById("day-label").textContent = `${currDate}`;
-  document.getElementById("btn-prev").disabled = dayIdx <= 0;
-  document.getElementById("btn-next").disabled = dayIdx >= allDates.length - 1;
+            const layout = baseLayout("Temperature (°F)", true);
+            Plotly.newPlot('mainChart', traces, layout, {responsive: true});
+        }
 
-  drawCalendar();
-}
+        function stepDay(delta) {
+            const newIdx = dayIdx + delta;
+            if (newIdx >= 0 && newIdx < allDates.length) {
+                dayIdx = newIdx;
+                renderCharts();
+            }
+        }
 
-// ─────────────────────────────────────────────
-// NAVIGATION
-// ─────────────────────────────────────────────
-function stepDay(delta) {
-  dayIdx = Math.max(0, Math.min(allDates.length - 1, dayIdx + delta));
-  const d = new Date(allDates[dayIdx]);
-  // Use UTC to prevent local timezone shifts in the calendar rendering
-  calYear  = d.getUTCFullYear();
-  calMonth = d.getUTCMonth();
-  renderCharts();
-}
-
-function jumpToDate(dateStr) {
-  const idx = allDates.indexOf(dateStr);
-  if (idx === -1) return;
-  dayIdx = idx;
-  const d = new Date(allDates[dayIdx]);
-  calYear  = d.getUTCFullYear();
-  calMonth = d.getUTCMonth();
-  renderCharts();
-}
-
-// ─────────────────────────────────────────────
-// CALENDAR
-// ─────────────────────────────────────────────
-function drawCalendar() {
-  document.getElementById("cal-month-label").textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
-
-  const grid = document.getElementById("cal-grid");
-  grid.innerHTML = "";
-
-  DAY_NAMES.forEach(d => {
-    const el = document.createElement("div");
-    el.className = "cal-dow"; el.textContent = d;
-    grid.appendChild(el);
-  });
-
-  const firstDay    = new Date(calYear, calMonth, 1).getDay();
-  const startOffset = (firstDay + 6) % 7;
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const availSet    = new Set(allDates);
-  const selectedStr = allDates[dayIdx];
-
-  for (let i = 0; i < startOffset; i++) {
-    const el = document.createElement("div");
-    el.className = "cal-day empty"; grid.appendChild(el);
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const mm      = String(calMonth + 1).padStart(2, "0");
-    const dd      = String(d).padStart(2, "0");
-    const dateStr = `${calYear}-${mm}-${dd}`;
-    const el      = document.createElement("div");
-    
-    el.textContent = d;
-    el.className = "cal-day";
-    
-    if (availSet.has(dateStr)) {
-      el.classList.add("has-data");
-      if (dateStr === selectedStr) el.classList.add("selected");
-      el.onclick = () => jumpToDate(dateStr);
-    }
-    grid.appendChild(el);
-  }
-}
-
-// ─────────────────────────────────────────────
-// INIT
-// ─────────────────────────────────────────────
-(async () => {
-  try {
-    await fetchData();
-    document.getElementById("loading").style.display  = "none";
-    document.getElementById("dashboard").style.display = "block";
-    renderCharts();
-  } catch (err) {
-    document.getElementById("loading").innerHTML =
-      `<div style="color:#c00;text-align:center">Failed to load data.<br><small>${err.message}</small></div>`;
-  }
-})();
-</script>
+        // Initialize on load
+        window.onload = fetchData;
+    </script>
 </body>
 </html>
