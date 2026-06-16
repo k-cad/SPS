@@ -1,310 +1,756 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telemetry Dashboard</title>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            margin: 0; 
-            padding: 20px; 
-            background-color: #f4f7f6; 
-            color: #2c3e50; 
-        }
-        .header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 20px; 
-            background: white; 
-            padding: 15px 25px; 
-            border-radius: 6px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-        }
-        .nav-btn { 
-            background: #2c3e50; 
-            color: white; 
-            border: none; 
-            padding: 8px 16px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            font-weight: 600; 
-            transition: background 0.2s;
-        }
-        .nav-btn:hover { background: #34495e; }
-        .nav-btn:disabled { background: #bdc3c7; cursor: not-allowed; }
-        #dateDisplay { font-size: 1.25em; font-weight: bold; letter-spacing: 0.5px; }
-        .chart-container { 
-            background: white; 
-            border-radius: 6px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-            padding: 20px; 
-            margin-bottom: 20px; 
-        }
-        #status {
-            text-align: center;
-            font-weight: bold;
-            color: #7f8c8d;
-            margin-bottom: 20px;
-        }
-        .error { color: #e74c3c !important; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ecowitt Dashboard v7</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<style>
+  /* ── Reset & Base ─────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f5f5f5;
+    color: #222;
+    min-height: 100vh;
+  }
+
+  /* ── Header ──────────────────────────────────────── */
+  #header {
+    background: #1a1a2e;
+    color: #fff;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #header h1 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  #header-date {
+    font-size: 0.9rem;
+    color: #aac4ff;
+    font-weight: 600;
+  }
+
+  /* ── Layout ──────────────────────────────────────── */
+  #app {
+    display: grid;
+    grid-template-columns: 1fr 230px;
+    gap: 0;
+    height: calc(100vh - 50px);
+    min-height: 600px;
+  }
+
+  /* ── Charts column ───────────────────────────────── */
+  #charts-col {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 8px 8px 8px;
+    gap: 4px;
+    overflow-y: auto;
+    background: #fff;
+  }
+
+  .chart-wrapper {
+    position: relative;
+    flex: 1 1 0;
+    min-height: 160px;
+  }
+
+  .chart-wrapper .plotly-graph-div {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* ── Sidebar ─────────────────────────────────────── */
+  #sidebar {
+    background: #f0f4ff;
+    border-left: 1px solid #d0d8ee;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 10px 10px;
+    gap: 14px;
+    overflow-y: auto;
+  }
+
+  /* ── Loading / Error ─────────────────────────────── */
+  #loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    gap: 12px;
+    font-size: 1rem;
+    color: #444;
+  }
+  .spinner {
+    width: 42px; height: 42px;
+    border: 4px solid #dde3f0;
+    border-top-color: #1f77b4;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Calendar ────────────────────────────────────── */
+  #cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  #cal-month-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+  .cal-nav-btn {
+    background: none;
+    border: 1px solid #bbc8e8;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px 7px;
+    font-size: 0.8rem;
+    color: #333;
+    line-height: 1.4;
+  }
+  .cal-nav-btn:hover { background: #dce6ff; }
+
+  #cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .cal-dow {
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #888;
+    padding: 2px 0 4px;
+  }
+  .cal-day {
+    text-align: center;
+    font-size: 0.72rem;
+    border-radius: 4px;
+    padding: 4px 0;
+    cursor: default;
+    user-select: none;
+    color: #bbb;
+    background: #e8eaf0;
+    line-height: 1.3;
+  }
+  .cal-day.has-data {
+    background: #cce5ff;
+    color: #003366;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .cal-day.has-data:hover { background: #99ccff; }
+  .cal-day.selected {
+    background: #1f77b4 !important;
+    color: #fff !important;
+  }
+  .cal-day.empty { background: transparent; }
+
+  /* ── Day nav buttons ─────────────────────────────── */
+  #day-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .day-nav-btn {
+    background: #1a1a2e;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    flex: 0 0 auto;
+  }
+  .day-nav-btn:disabled { background: #ccc; cursor: default; }
+  .day-nav-btn:not(:disabled):hover { background: #2e2e5e; }
+  #day-counter {
+    font-size: 0.75rem;
+    color: #555;
+    text-align: center;
+    flex: 1;
+  }
+
+  /* ── Stats panel ─────────────────────────────────── */
+  #stats-box {
+    background: #fff;
+    border: 1px solid #d0d8ee;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 0.75rem;
+    flex: 1;
+  }
+  #stats-box h3 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #e0e6f5;
+    padding-bottom: 4px;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px dashed #eee;
+    color: #333;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { color: #666; }
+  .stat-val { font-weight: 700; }
+
+  /* ── Legend note ─────────────────────────────────── */
+  #legend-note {
+    font-size: 0.68rem;
+    color: #888;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  /* ── Responsive ──────────────────────────────────── */
+  @media (max-width: 700px) {
+    #app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    #sidebar { flex-direction: row; flex-wrap: wrap; height: auto; }
+  }
+</style>
 </head>
 <body>
 
-    <div class="header">
-        <button class="nav-btn" id="prevBtn" onclick="stepDay(-1)" disabled>&#8592; Previous</button>
-        <div id="dateDisplay">Loading Telemetry...</div>
-        <button class="nav-btn" id="nextBtn" onclick="stepDay(1)" disabled>Next &#8594;</button>
+<!-- Loading -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <span id="loading-msg">Fetching weather data…</span>
+</div>
+
+<!-- Header -->
+<div id="header">
+  <h1>🌤 Ecowitt Weather Dashboard</h1>
+  <span id="header-date">—</span>
+</div>
+
+<!-- Main layout -->
+<div id="app">
+  <!-- Charts -->
+  <div id="charts-col">
+    <div class="chart-wrapper" id="chart-temp"></div>
+    <div class="chart-wrapper" id="chart-solar"></div>
+    <div class="chart-wrapper" id="chart-wind"></div>
+    <div class="chart-wrapper" id="chart-humidity"></div>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+
+    <!-- Day navigation -->
+    <div id="day-nav">
+      <button class="day-nav-btn" id="btn-prev" disabled>◀ Prev</button>
+      <div id="day-counter">—</div>
+      <button class="day-nav-btn" id="btn-next" disabled>Next ▶</button>
     </div>
 
-    <div id="status">Fetching data from Google Sheets...</div>
-
-    <div class="chart-container">
-        <div id="mainChart"></div>
+    <!-- Calendar -->
+    <div>
+      <div id="cal-header">
+        <button class="cal-nav-btn" id="cal-prev">◀</button>
+        <span id="cal-month-label">—</span>
+        <button class="cal-nav-btn" id="cal-next">▶</button>
+      </div>
+      <div id="cal-grid"></div>
     </div>
 
-    <script>
-        // ─────────────────────────────────────────────
-        // CONFIGURATION - UPDATE THESE VALUES
-        // ─────────────────────────────────────────────
-        const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE"; 
-        const TAB_NAME = "Sheet1"; // Update if your tab is named differently
-        const SMOOTH_WINDOW = 15;  // Number of data points for the rolling average
+    <!-- Daily stats -->
+    <div id="stats-box">
+      <h3>Daily Summary</h3>
+      <div id="stats-content">Select a day to see stats.</div>
+    </div>
 
-        // Map your EXACT Google Sheet column headers here
-        const COL = {
-            timestamp: "Timestamp", // The column containing the date/time string
-            poolTemp: "Pool Temp",  // Replace with exact header
-            spaTemp: "Spa Temp",    // Replace with exact header
-            airTemp: "Air Temp"     // Replace with exact header
-        };
+    <!-- Legend note -->
+    <div id="legend-note">
+      Solid line = selected day<br>
+      Faint line = previous day<br>
+      Lines are 60-pt rolling average
+    </div>
 
-        // UI Configuration for the traces
-        const TRACE_CONFIG = {
-            poolTemp: { name: 'Pool', color: '#3498db' },
-            spaTemp:  { name: 'Spa', color: '#e74c3c' },
-            airTemp:  { name: 'Air', color: '#95a5a6' }
-        };
+  </div>
+</div>
 
-        // ─────────────────────────────────────────────
-        // STATE VARIABLES
-        // ─────────────────────────────────────────────
-        let smoothedByDate = {};
-        let allDates = [];
-        let dayIdx = 0;
+<script>
+// ─────────────────────────────────────────────
+// CONFIG  (mirrors Python script)
+// ─────────────────────────────────────────────
+const SPREADSHEET_ID = "1Ru8OhlbwrGnCcVc-EbtakgnzVRNlTuBzTCNGd9g4IbU";
+const TAB_NAME       = "Ecowitt Data";
+const SMOOTH_WINDOW  = 60;
 
-        // ─────────────────────────────────────────────
-        // UTILS
-        // ─────────────────────────────────────────────
-        function parseCSV(text) {
-            const lines = text.trim().split("\n");
-            const headers = lines[0].split(",").map(h => h.replace(/^"|"$/g, "").trim());
-            return lines.slice(1).map(line => {
-                const cols = [];
-                let cur = "", inQ = false;
-                for (const ch of line) {
-                    if (ch === '"') { inQ = !inQ; }
-                    else if (ch === ',' && !inQ) { cols.push(cur); cur = ""; }
-                    else { cur += ch; }
-                }
-                cols.push(cur);
-                const obj = {};
-                headers.forEach((h, i) => { obj[h] = (cols[i] || "").replace(/^"|"$/g, "").trim(); });
-                return obj;
-            });
-        }
+const COL = {
+  timestamp:    "Timestamp (Local)",
+  temp_spa:     "Spa Temp (F)",
+  temp_pool:    "Pool Temp (F)",
+  temp_nosun:   "Water No Sun (F)",
+  temp_out:     "Outdoor Temp (°F)",
+  temp_in:      "Indoor Temp (°F)",
+  wind_speed:   "Wind Speed (mph)",
+  wind_gust:    "Wind Gust (mph)",
+  solar:        "Solar Radiation (W/m²)",
+  uv:           "UV Index",
+  humidity_out: "Outdoor Humidity (%)",
+  humidity_in:  "Indoor Humidity (%)",
+  vpd:          "VPD (kPa)",
+};
 
-        function parseNaiveDateTime(ts) {
-            if (!ts) return null;
-            ts = ts.replace(/^"|"$/g, "").trim();
-            
-            // Handles typical Sheets formats: "6/12/2026 17:05:00" or "2026-06-12 17:05"
-            const match = ts.match(/(\d+)[-\/](\d+)[-\/](\d+)[ T](\d+):(\d+):?(\d+)?(?:\s*(AM|PM|am|pm))?/);
-            if (!match) return null;
+const MONTH_NAMES = ["January","February","March","April","May","June",
+                     "July","August","September","October","November","December"];
 
-            let p1 = match[1], p2 = match[2], p3 = match[3];
-            let year, month, day;
-            
-            if (p1.length === 4) {
-                year = p1; month = p2; day = p3;
-            } else {
-                month = p1; day = p2; year = p3;
-            }
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let allRows    = [];    // parsed rows [{ts, date, cols...}]
+let allDates   = [];    // sorted unique date strings "YYYY-MM-DD"
+let dateSet    = new Set();
+let dateToRows = {};    // "YYYY-MM-DD" → [rows]
+let dayIdx     = 0;
+let calYear    = 0;
+let calMonth   = 0;    // 0-based
 
-            let h = parseInt(match[4], 10);
-            let m = parseInt(match[5], 10);
-            let s = parseInt(match[6] || 0, 10);
-            let ampm = match[7] ? match[7].toUpperCase() : null;
+// ─────────────────────────────────────────────
+// CSV FETCH & PARSE
+// ─────────────────────────────────────────────
+async function fetchData() {
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(TAB_NAME)}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return resp.text();
+}
 
-            if (ampm === "PM" && h < 12) h += 12;
-            if (ampm === "AM" && h === 12) h = 0;
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) throw new Error("Empty CSV");
 
-            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const timeFloat = h + (m / 60) + (s / 3600);
-            const sortKey = `${dateStr}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  // Parse header — handle quoted fields
+  const headers = splitCSVRow(lines[0]);
 
-            return { dateStr, timeFloat, sortKey };
-        }
+  const tsIdx = headers.indexOf(COL.timestamp);
+  if (tsIdx === -1) throw new Error("Timestamp column not found");
 
-        function rollingMean(arr, w) {
-            const half = Math.floor(w / 2);
-            return arr.map((_, i) => {
-                const start = Math.max(0, i - half);
-                const end   = Math.min(arr.length, i + half + 1);
-                const slice = arr.slice(start, end).filter(v => v !== null && !isNaN(v));
-                return slice.length ? slice.reduce((a, b) => a + b, 0) / slice.length : null;
-            });
-        }
+  const colIdx = {};
+  for (const [key, name] of Object.entries(COL)) {
+    const i = headers.indexOf(name);
+    if (i !== -1) colIdx[key] = i;
+  }
 
-        const X_TICKS = [0,2,4,6,8,10,12,14,16,18,20,22,24];
-        const X_TICK_TEXTS = X_TICKS.map(h => String(Math.floor(h)).padStart(2,"0") + ":00");
+  const rows = [];
+  for (let li = 1; li < lines.length; li++) {
+    const fields = splitCSVRow(lines[li]);
+    const tsRaw  = fields[tsIdx];
+    const ts     = new Date(tsRaw);
+    if (isNaN(ts)) continue;
 
-        function baseLayout(yTitle, showXLabels) {
-            return {
-                margin: { t: 20, b: showXLabels ? 40 : 15, l: 50, r: 20 },
-                xaxis: {
-                    range: [0, 24],
-                    tickvals: X_TICKS,
-                    ticktext: showXLabels ? X_TICK_TEXTS : X_TICKS.map(()=>""),
-                    tickfont: { size: 11 },
-                    title: showXLabels ? { text: "Time of Day", font: { size: 12, weight: 'bold' } } : null,
-                    showgrid: true, gridcolor: "#e0e0e0", gridwidth: 1, griddash: "dot"
-                },
-                yaxis: {
-                    title: { text: yTitle, font: { size: 12, weight: 'bold' } },
-                    showgrid: true, gridcolor: "#e0e0e0", gridwidth: 1, griddash: "dot", zeroline: false,
-                },
-                legend: {
-                    orientation: "h", y: 1.1, x: 0.5,
-                    xanchor: "center", yanchor: "bottom",
-                    font: { size: 12 }
-                },
-                plot_bgcolor: "white", paper_bgcolor: "white",
-                height: 450, hovermode: "x unified"
-            };
-        }
+    const row = { ts };
+    row.date = ts.toISOString().slice(0, 10);   // "YYYY-MM-DD"
+    row.timeH = ts.getHours() + ts.getMinutes() / 60 + ts.getSeconds() / 3600;
 
-        // ─────────────────────────────────────────────
-        // FETCH & PRE-COMPUTE DATA
-        // ─────────────────────────────────────────────
-        async function fetchData() {
-            try {
-                const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(TAB_NAME)}`;
-                const resp = await fetch(url);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const rows = parseCSV(await resp.text());
+    for (const [key, idx] of Object.entries(colIdx)) {
+      if (key === "timestamp") continue;
+      const v = parseFloat(fields[idx]);
+      row[key] = isNaN(v) ? null : v;
+    }
+    rows.push(row);
+  }
 
-                const byDate = {};
-                
-                rows.forEach(row => {
-                    const parsed = parseNaiveDateTime(row[COL.timestamp]);
-                    if (!parsed) return;
-                    
-                    row._dateStr = parsed.dateStr;
-                    row._timeFloat = parsed.timeFloat;
-                    row._sortKey = parsed.sortKey;
+  rows.sort((a, b) => a.ts - b.ts);
+  return rows;
+}
 
-                    if (!byDate[parsed.dateStr]) byDate[parsed.dateStr] = [];
-                    byDate[parsed.dateStr].push(row);
-                });
+function splitCSVRow(line) {
+  const fields = [];
+  let cur = "", inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { fields.push(cur.trim()); cur = ""; }
+    else { cur += c; }
+  }
+  fields.push(cur.trim());
+  return fields;
+}
 
-                const allKeys = Object.keys(COL).filter(k => k !== "timestamp");
-                Object.entries(byDate).forEach(([ds, dayRows]) => {
-                    // Sort natively by ISO string representation to fix out-of-order rows
-                    dayRows.sort((a, b) => a._sortKey.localeCompare(b._sortKey));
-                    
-                    smoothedByDate[ds] = {};
-                    allKeys.forEach(key => {
-                        const colName = COL[key];
-                        const x = [], y = [];
-                        dayRows.forEach(r => {
-                            const t = r._timeFloat;
-                            const v = parseFloat(r[colName]);
-                            if (t !== null && !isNaN(v)) { x.push(t); y.push(v); }
-                        });
-                        const ySm = rollingMean(y, SMOOTH_WINDOW);
-                        smoothedByDate[ds][key] = { x, y, ySm };
-                    });
-                });
+// ─────────────────────────────────────────────
+// SMOOTHING  (rolling average)
+// ─────────────────────────────────────────────
+function rollingMean(arr, w) {
+  const out = new Array(arr.length).fill(null);
+  for (let i = 0; i < arr.length; i++) {
+    const half  = Math.floor(w / 2);
+    const start = Math.max(0, i - half);
+    const end   = Math.min(arr.length - 1, i + half);
+    let sum = 0, count = 0;
+    for (let j = start; j <= end; j++) {
+      if (arr[j] !== null) { sum += arr[j]; count++; }
+    }
+    out[i] = count > 0 ? sum / count : null;
+  }
+  return out;
+}
 
-                allDates = Object.keys(smoothedByDate).sort();
-                if (allDates.length === 0) throw new Error("No valid dates found in data.");
-                
-                dayIdx = allDates.length - 1; // Default to most recent day
-                document.getElementById("status").style.display = "none";
-                renderCharts();
+// ─────────────────────────────────────────────
+// PLOTLY CHART HELPERS
+// ─────────────────────────────────────────────
+const CHART_LAYOUT_BASE = {
+  margin: { l: 52, r: 52, t: 32, b: 36 },
+  plot_bgcolor:  "#ffffff",
+  paper_bgcolor: "#ffffff",
+  font: { family: "'Segoe UI', system-ui, sans-serif", size: 11, color: "#333" },
+  xaxis: {
+    range: [0, 24],
+    dtick: 2,
+    tickformat: "d",
+    ticksuffix: ":00",
+    gridcolor: "#e8eaf0",
+    gridwidth: 1,
+    zeroline: false,
+    title: { text: "Time of Day", standoff: 6 },
+  },
+  showlegend: true,
+  legend: { x: 0.01, y: 0.99, bgcolor: "rgba(255,255,255,0.85)",
+            bordercolor: "#ccc", borderwidth: 1, font: { size: 10 } },
+};
 
-            } catch (err) {
-                console.error("Data fetch error:", err);
-                const statusEl = document.getElementById("status");
-                statusEl.innerText = "Error loading data. Check console and ensure Spreadsheet ID is correct and public.";
-                statusEl.className = "error";
-            }
-        }
+function makeLayout(title, yLabel, yLabel2, yColor2) {
+  const layout = JSON.parse(JSON.stringify(CHART_LAYOUT_BASE));
+  layout.title = { text: `<b>${title}</b>`, x: 0.01, xanchor: "left", font: { size: 12 } };
+  layout.yaxis  = { title: { text: yLabel }, gridcolor: "#e8eaf0", zeroline: false };
+  if (yLabel2) {
+    layout.yaxis2 = {
+      title: { text: yLabel2, font: { color: yColor2 } },
+      overlaying: "y", side: "right", zeroline: false,
+      tickfont: { color: yColor2 },
+    };
+  }
+  return layout;
+}
 
-        // ─────────────────────────────────────────────
-        // RENDER & NAVIGATION
-        // ─────────────────────────────────────────────
-        function renderCharts() {
-            if (allDates.length === 0) return;
-            
-            const currentDate = allDates[dayIdx];
-            const data = smoothedByDate[currentDate];
+function makeSeries(rows, key, label, color, lw, dash, yaxis, alpha) {
+  const x  = rows.map(r => r.timeH);
+  const y  = rows.map(r => r[key]);
+  const ys = rollingMean(y, SMOOTH_WINDOW);
+  return [
+    // Raw (faint)
+    {
+      x, y,
+      mode: "lines", name: label + " (raw)",
+      line: { color: color, width: Math.max(lw - 0.8, 0.4), dash },
+      opacity: alpha * 0.18,
+      showlegend: false,
+      yaxis: yaxis || "y",
+      hoverinfo: "skip",
+    },
+    // Smoothed
+    {
+      x, y: ys,
+      mode: "lines", name: label,
+      line: { color: color, width: lw, dash },
+      opacity: alpha,
+      yaxis: yaxis || "y",
+    },
+  ];
+}
 
-            // Update UI
-            document.getElementById("dateDisplay").innerText = currentDate;
-            document.getElementById("prevBtn").disabled = dayIdx === 0;
-            document.getElementById("nextBtn").disabled = dayIdx === allDates.length - 1;
+// ─────────────────────────────────────────────
+// BUILD / UPDATE CHARTS
+// ─────────────────────────────────────────────
+let chartsInit = false;
 
-            const traces = [];
-            const keysToRender = Object.keys(COL).filter(k => k !== "timestamp");
+function buildCharts(curr, prev) {
 
-            keysToRender.forEach(key => {
-                if (!data[key] || data[key].x.length === 0) return;
-                
-                const config = TRACE_CONFIG[key] || { name: key, color: '#333' };
+  const panels = [
+    {
+      el: "chart-temp",
+      title: "Temperatures",
+      yLabel: "°F",
+      series: [
+        { key: "temp_spa",   label: "Spa Temp",     color: "#d62728", lw: 2.2 },
+        { key: "temp_pool",  label: "Pool Temp",    color: "#1f77b4", lw: 2.2 },
+        { key: "temp_nosun", label: "Water No Sun", color: "#17becf", lw: 2.2 },
+        { key: "temp_out",   label: "Outdoor Temp", color: "#e6a817", lw: 1.8 },
+      ],
+    },
+    {
+      el: "chart-solar",
+      title: "Solar Radiation & UV",
+      yLabel: "W/m²",
+      yLabel2: "UV Index",
+      yColor2: "#b44fd4",
+      series: [
+        { key: "solar", label: "Solar Radiation", color: "#f4a500", lw: 1.8 },
+      ],
+      series2: [
+        { key: "uv", label: "UV Index", color: "#b44fd4", lw: 1.6, dash: "dash", yaxis: "y2" },
+      ],
+    },
+    {
+      el: "chart-wind",
+      title: "Wind Speed & Gusts",
+      yLabel: "mph",
+      series: [
+        { key: "wind_speed", label: "Wind Speed", color: "#2ca02c", lw: 1.8 },
+        { key: "wind_gust",  label: "Wind Gust",  color: "#98df8a", lw: 1.6, dash: "dot" },
+      ],
+    },
+    {
+      el: "chart-humidity",
+      title: "Humidity & VPD",
+      yLabel: "%",
+      yLabel2: "VPD (kPa)",
+      yColor2: "#8c564b",
+      series: [
+        { key: "humidity_out", label: "Outdoor Humidity", color: "#1f77b4", lw: 1.8 },
+        { key: "humidity_in",  label: "Indoor Humidity",  color: "#aec7e8", lw: 1.4, dash: "dot" },
+      ],
+      series2: [
+        { key: "vpd", label: "VPD", color: "#8c564b", lw: 1.6, dash: "dash", yaxis: "y2" },
+      ],
+    },
+  ];
 
-                // Raw Scatter Points (Low opacity)
-                traces.push({
-                    x: data[key].x,
-                    y: data[key].y,
-                    mode: 'markers',
-                    type: 'scatter',
-                    name: `${config.name} (Raw)`,
-                    marker: { color: config.color, size: 4, opacity: 0.15 },
-                    showlegend: false,
-                    hoverinfo: 'skip'
-                });
+  for (const panel of panels) {
+    const traces = [];
 
-                // Smoothed Line
-                traces.push({
-                    x: data[key].x,
-                    y: data[key].ySm,
-                    mode: 'lines',
-                    type: 'scatter',
-                    name: config.name,
-                    line: { color: config.color, width: 3 },
-                    hovertemplate: '%{y:.1f}°<extra></extra>'
-                });
-            });
+    // Previous day (faint)
+    if (prev) {
+      for (const s of panel.series || []) {
+        const t = makeSeries(prev, s.key, s.label, s.color, s.lw, s.dash || "solid", s.yaxis, 0.22);
+        t[0].showlegend = false;
+        t[1].name = s.label + " (prev)";
+        t[1].line.dash = "dot";
+        t[1].showlegend = false;
+        traces.push(...t);
+      }
+      for (const s of panel.series2 || []) {
+        const t = makeSeries(prev, s.key, s.label, s.color, s.lw, s.dash || "solid", s.yaxis, 0.22);
+        t[0].showlegend = false;
+        t[1].name = s.label + " (prev)";
+        t[1].line.dash = "dot";
+        t[1].showlegend = false;
+        traces.push(...t);
+      }
+    }
 
-            const layout = baseLayout("Temperature (°F)", true);
-            Plotly.newPlot('mainChart', traces, layout, {responsive: true});
-        }
+    // Current day
+    for (const s of panel.series || []) {
+      traces.push(...makeSeries(curr, s.key, s.label, s.color, s.lw, s.dash || "solid", s.yaxis, 1.0));
+    }
+    for (const s of panel.series2 || []) {
+      traces.push(...makeSeries(curr, s.key, s.label, s.color, s.lw, s.dash || "solid", s.yaxis, 1.0));
+    }
 
-        function stepDay(delta) {
-            const newIdx = dayIdx + delta;
-            if (newIdx >= 0 && newIdx < allDates.length) {
-                dayIdx = newIdx;
-                renderCharts();
-            }
-        }
+    const layout = makeLayout(panel.title, panel.yLabel, panel.yLabel2, panel.yColor2);
+    const config = { responsive: true, displayModeBar: false };
 
-        // Initialize on load
-        window.onload = fetchData;
-    </script>
+    const el = document.getElementById(panel.el);
+    if (!chartsInit) {
+      Plotly.newPlot(el, traces, layout, config);
+    } else {
+      Plotly.react(el, traces, layout, config);
+    }
+  }
+
+  chartsInit = true;
+}
+
+// ─────────────────────────────────────────────
+// DAILY STATS SIDEBAR
+// ─────────────────────────────────────────────
+function calcStats(rows) {
+  const get = key => rows.map(r => r[key]).filter(v => v !== null);
+
+  const minMax = key => {
+    const vals = get(key);
+    if (!vals.length) return "—";
+    return `${Math.min(...vals).toFixed(1)} / ${Math.max(...vals).toFixed(1)}`;
+  };
+  const maxVal = key => {
+    const vals = get(key);
+    return vals.length ? Math.max(...vals).toFixed(1) : "—";
+  };
+  const avgVal = key => {
+    const vals = get(key);
+    if (!vals.length) return "—";
+    return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
+  };
+
+  return [
+    { label: "Spa Temp (min/max °F)",     val: minMax("temp_spa")   },
+    { label: "Pool Temp (min/max °F)",    val: minMax("temp_pool")  },
+    { label: "Outdoor Temp (min/max °F)", val: minMax("temp_out")   },
+    { label: "Peak Solar (W/m²)",         val: maxVal("solar")      },
+    { label: "Peak UV Index",             val: maxVal("uv")         },
+    { label: "Max Wind Gust (mph)",       val: maxVal("wind_gust")  },
+    { label: "Avg Outdoor Humidity (%)",  val: avgVal("humidity_out")},
+    { label: "Avg VPD (kPa)",            val: avgVal("vpd")        },
+  ];
+}
+
+function renderStats(rows) {
+  const stats = calcStats(rows);
+  const box = document.getElementById("stats-content");
+  box.innerHTML = stats.map(s =>
+    `<div class="stat-row">
+       <span class="stat-label">${s.label}</span>
+       <span class="stat-val">${s.val}</span>
+     </div>`
+  ).join("");
+}
+
+// ─────────────────────────────────────────────
+// SHOW DAY
+// ─────────────────────────────────────────────
+function showDay(idx) {
+  dayIdx = idx;
+  const date     = allDates[idx];
+  const currRows = dateToRows[date] || [];
+  const prevDate = idx > 0 ? allDates[idx - 1] : null;
+  const prevRows = prevDate ? (dateToRows[prevDate] || []) : [];
+
+  buildCharts(currRows, prevRows.length ? prevRows : null);
+  renderStats(currRows);
+  updateDayNav();
+  calendarRender();
+  updateHeaderDate(date);
+}
+
+function updateHeaderDate(date) {
+  const d = new Date(date + "T12:00:00");
+  const label = d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  document.getElementById("header-date").textContent = label;
+  document.getElementById("day-counter").textContent = `Day ${dayIdx + 1} of ${allDates.length}`;
+}
+
+function updateDayNav() {
+  document.getElementById("btn-prev").disabled = dayIdx <= 0;
+  document.getElementById("btn-next").disabled = dayIdx >= allDates.length - 1;
+}
+
+// ─────────────────────────────────────────────
+// CALENDAR
+// ─────────────────────────────────────────────
+function calendarRender() {
+  const grid  = document.getElementById("cal-grid");
+  const label = document.getElementById("cal-month-label");
+  label.textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
+
+  // Day-of-week headers
+  const DOW = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+  let html = DOW.map(d => `<div class="cal-dow">${d}</div>`).join("");
+
+  // First day of month (0=Sun…6=Sat → shift to Mon-start)
+  const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
+  const startPad = (firstDay + 6) % 7; // Mo=0
+  for (let i = 0; i < startPad; i++) html += `<div class="cal-day empty"></div>`;
+
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const selectedDate = allDates[dayIdx];
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const mm  = String(calMonth + 1).padStart(2, "0");
+    const dd  = String(d).padStart(2, "0");
+    const iso = `${calYear}-${mm}-${dd}`;
+    const has = dateSet.has(iso);
+    const sel = iso === selectedDate;
+    const cls = ["cal-day", has ? "has-data" : "", sel ? "selected" : ""].join(" ").trim();
+    const attr = has ? `data-date="${iso}"` : "";
+    html += `<div class="${cls}" ${attr}>${d}</div>`;
+  }
+
+  grid.innerHTML = html;
+
+  // Click handler
+  grid.querySelectorAll(".cal-day.has-data").forEach(el => {
+    el.addEventListener("click", () => {
+      const iso = el.getAttribute("data-date");
+      const idx = allDates.indexOf(iso);
+      if (idx !== -1) showDay(idx);
+    });
+  });
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+async function init() {
+  try {
+    document.getElementById("loading-msg").textContent = "Fetching weather data…";
+    const csv = await fetchData();
+    document.getElementById("loading-msg").textContent = "Parsing data…";
+    allRows = parseCSV(csv);
+
+    // Group by date
+    dateToRows = {};
+    for (const row of allRows) {
+      if (!dateToRows[row.date]) dateToRows[row.date] = [];
+      dateToRows[row.date].push(row);
+    }
+    allDates = Object.keys(dateToRows).sort();
+    dateSet  = new Set(allDates);
+
+    if (!allDates.length) throw new Error("No valid data rows found.");
+
+    // Start on most recent day
+    dayIdx = allDates.length - 1;
+
+    // Init calendar on latest month
+    const latest = new Date(allDates[allDates.length - 1] + "T12:00:00");
+    calYear  = latest.getFullYear();
+    calMonth = latest.getMonth();
+
+    // Wire up controls
+    document.getElementById("btn-prev").addEventListener("click", () => {
+      if (dayIdx > 0) showDay(dayIdx - 1);
+    });
+    document.getElementById("btn-next").addEventListener("click", () => {
+      if (dayIdx < allDates.length - 1) showDay(dayIdx + 1);
+    });
+    document.getElementById("cal-prev").addEventListener("click", () => {
+      calMonth--;
+      if (calMonth < 0) { calMonth = 11; calYear--; }
+      calendarRender();
+    });
+    document.getElementById("cal-next").addEventListener("click", () => {
+      calMonth++;
+      if (calMonth > 11) { calMonth = 0; calYear++; }
+      calendarRender();
+    });
+
+    // Hide loading
+    document.getElementById("loading-overlay").style.display = "none";
+
+    showDay(dayIdx);
+
+    console.log(`✓ ${allRows.length} rows, ${allDates.length} days (${allDates[0]} → ${allDates[allDates.length - 1]})`);
+  } catch (err) {
+    document.getElementById("loading-msg").textContent = `Error: ${err.message}`;
+    document.querySelector(".spinner").style.display = "none";
+    console.error(err);
+  }
+}
+
+init();
+</script>
 </body>
 </html>
