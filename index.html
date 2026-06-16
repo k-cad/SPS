@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ecowitt Dashboard t</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>SPS Temp Dashboard</title>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -13,25 +13,98 @@
     background: #f4f6f9;
     color: #222;
     min-height: 100vh;
+    /* Prevent horizontal scroll on mobile */
+    overflow-x: hidden;
   }
 
+  /* ── Header ── */
   header {
     background: #1a1a2e;
     color: white;
-    padding: 12px 20px;
+    padding: 10px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
     gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
   }
-  header h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: 0.02em; }
-  #date-display { font-size: 0.95rem; color: #a0b4cc; }
+  header h1 {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #date-display {
+    font-size: 0.82rem;
+    color: #a0b4cc;
+    white-space: nowrap;
+  }
 
-  /* Loading */
+  /* ── Sticky day-nav bar (below header on mobile) ── */
+  #day-nav-bar {
+    background: white;
+    border-bottom: 1px solid #dce2ef;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: sticky;
+    top: 46px;   /* height of header */
+    z-index: 99;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .nav-btn {
+    padding: 8px 14px;
+    border: 1.5px solid #1f77b4;
+    border-radius: 6px;
+    background: white;
+    color: #1f77b4;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    white-space: nowrap;
+    /* Bigger tap target on mobile */
+    min-height: 40px;
+    min-width: 72px;
+  }
+  .nav-btn:hover, .nav-btn:active { background: #1f77b4; color: white; }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .nav-btn:disabled:hover, .nav-btn:disabled:active { background: white; color: #1f77b4; }
+  #day-counter {
+    font-size: 0.78rem;
+    color: #555;
+    text-align: center;
+    flex: 1;
+    line-height: 1.4;
+    font-weight: 600;
+  }
+
+  /* ── Sidebar toggle (mobile only) ── */
+  #sidebar-toggle {
+    display: none;
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    min-height: 40px;
+  }
+  #sidebar-toggle:active { background: #2e2e5e; }
+
+  /* ── Loading ── */
   #loading {
     display: flex; align-items: center; justify-content: center;
-    height: 60vh; font-size: 1.1rem; color: #666;
+    height: 60vh; font-size: 1rem; color: #666;
     flex-direction: column; gap: 12px;
   }
   .spinner {
@@ -47,11 +120,18 @@
   #main-layout {
     display: grid;
     grid-template-columns: 1fr 240px;
-    min-height: calc(100vh - 50px);
+    align-items: start;
   }
 
   /* ── Charts column ── */
-  #charts-col { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  #charts-col {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    /* Touch: allow horizontal swipe to be detected */
+    touch-action: pan-y;
+  }
 
   .chart-card {
     background: white;
@@ -60,8 +140,8 @@
     overflow: hidden;
   }
   .chart-title {
-    padding: 7px 14px 3px;
-    font-size: 0.82rem;
+    padding: 7px 12px 3px;
+    font-size: 0.78rem;
     font-weight: 700;
     color: #444;
     border-bottom: 1px solid #f0f0f0;
@@ -77,28 +157,11 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-  }
-
-  /* Day nav */
-  #day-nav {
-    display: flex; align-items: center; gap: 6px;
-  }
-  .nav-btn {
-    padding: 6px 12px;
-    border: 1.5px solid #1f77b4;
-    border-radius: 6px;
-    background: white; color: #1f77b4;
-    font-size: 0.82rem; font-weight: 700;
-    cursor: pointer; transition: background 0.12s, color 0.12s;
-    white-space: nowrap;
-  }
-  .nav-btn:hover { background: #1f77b4; color: white; }
-  .nav-btn:disabled { opacity: 0.3; cursor: default; }
-  .nav-btn:disabled:hover { background: white; color: #1f77b4; }
-  #day-counter {
-    font-size: 0.75rem; color: #666;
-    text-align: center; flex: 1;
-    line-height: 1.4;
+    /* Sidebar sticks while scrolling charts on desktop */
+    position: sticky;
+    top: 46px;
+    max-height: calc(100vh - 46px);
+    overflow-y: auto;
   }
 
   /* Calendar */
@@ -112,30 +175,35 @@
   .cal-nav {
     background: none; border: 1px solid #bbc8e8;
     border-radius: 4px; cursor: pointer;
-    padding: 2px 8px; font-size: 0.8rem; color: #333;
+    padding: 4px 10px; font-size: 0.85rem; color: #333;
+    min-height: 32px; min-width: 32px;
   }
-  .cal-nav:hover { background: #dce6ff; }
+  .cal-nav:hover, .cal-nav:active { background: #dce6ff; }
 
   #cal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
+    gap: 3px;
   }
   .cal-dow {
     text-align: center; font-size: 0.62rem;
-    font-weight: 700; color: #888; padding: 2px 0 3px;
+    font-weight: 700; color: #888; padding: 2px 0 4px;
   }
   .cal-day {
-    text-align: center; font-size: 0.72rem;
-    border-radius: 4px; padding: 4px 1px;
+    text-align: center; font-size: 0.75rem;
+    border-radius: 5px; padding: 6px 1px;
     cursor: default; user-select: none;
     color: #ccc; background: #e8eaf0; line-height: 1.3;
   }
   .cal-day.has-data {
     background: #cce5ff; color: #003366;
     font-weight: 700; cursor: pointer;
+    /* Minimum tap target */
+    min-height: 32px; display: flex;
+    align-items: center; justify-content: center;
   }
-  .cal-day.has-data:hover { background: #99ccff; }
+  .cal-day.has-data:hover,
+  .cal-day.has-data:active { background: #99ccff; }
   .cal-day.selected { background: #1f77b4 !important; color: #fff !important; }
   .cal-day.empty { background: transparent; color: transparent; }
 
@@ -145,10 +213,9 @@
     border: 1px solid #dce2ef;
     border-radius: 6px;
     padding: 10px;
-    flex: 1;
   }
   #stats-box h3 {
-    font-size: 0.78rem; font-weight: 700;
+    font-size: 0.75rem; font-weight: 700;
     color: #1a1a2e; margin-bottom: 8px;
     border-bottom: 1px solid #eee; padding-bottom: 4px;
     text-transform: uppercase; letter-spacing: 0.04em;
@@ -156,41 +223,95 @@
   .stat-row {
     display: flex; justify-content: space-between;
     padding: 4px 0; border-bottom: 1px dashed #f0f0f0;
-    font-size: 0.74rem; gap: 6px;
+    font-size: 0.72rem; gap: 6px; align-items: baseline;
   }
   .stat-row:last-child { border-bottom: none; }
   .stat-label { color: #666; line-height: 1.4; }
   .stat-val { font-weight: 700; color: #1a1a2e; white-space: nowrap; }
 
   #legend-note {
-    font-size: 0.67rem; color: #999;
-    text-align: center; line-height: 1.6;
+    font-size: 0.65rem; color: #999;
+    text-align: center; line-height: 1.7;
   }
 
-  /* Responsive */
+  /* ── Swipe hint (mobile only) ── */
+  #swipe-hint {
+    display: none;
+    text-align: center;
+    font-size: 0.7rem;
+    color: #aaa;
+    padding: 4px 0 2px;
+  }
+
+  /* ════════════════════════════════
+     MOBILE  (≤ 720px)
+     ════════════════════════════════ */
   @media (max-width: 720px) {
-    #main-layout { grid-template-columns: 1fr; }
-    #sidebar { flex-direction: row; flex-wrap: wrap; }
+
+    header { top: 0; padding: 8px 12px; }
+    header h1 { font-size: 0.9rem; }
+    #date-display { font-size: 0.75rem; }
+
+    #day-nav-bar { top: 40px; padding: 6px 10px; gap: 6px; }
+    #sidebar-toggle { display: block; }
+
+    #main-layout {
+      grid-template-columns: 1fr;
+    }
+
+    /* Sidebar collapses to a slide-down panel */
+    #sidebar {
+      position: static;
+      max-height: 0;
+      overflow: hidden;
+      padding: 0 10px;
+      border-left: none;
+      border-top: 1px solid #dce2ef;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      background: #eef1f7;
+    }
+    #sidebar.open {
+      max-height: 800px;
+      padding: 12px 10px;
+    }
+
+    /* Charts take full width, shorter on mobile */
+    #charts-col { padding: 6px; gap: 6px; }
+
+    .chart-title { font-size: 0.72rem; padding: 5px 10px 2px; }
+
+    /* Swipe hint visible */
+    #swipe-hint { display: block; }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🌤 Ecowitt Weather Dashboard</h1>
+  <h1>🌤 Ecowitt Dashboard</h1>
   <div id="date-display">Loading…</div>
 </header>
 
 <div id="loading">
   <div class="spinner"></div>
-  <div>Fetching data from Google Sheets…</div>
+  <div>Fetching data…</div>
 </div>
 
 <div id="dashboard">
+
+  <!-- Sticky nav bar -->
+  <div id="day-nav-bar">
+    <button class="nav-btn" id="btn-prev" onclick="stepDay(-1)">◀ Prev</button>
+    <div id="day-counter">—</div>
+    <button class="nav-btn" id="btn-next" onclick="stepDay(1)">Next ▶</button>
+    <button id="sidebar-toggle" onclick="toggleSidebar()">📅 Stats</button>
+  </div>
+
   <div id="main-layout">
 
     <!-- Charts -->
     <div id="charts-col">
+      <div id="swipe-hint">← swipe to change day →</div>
       <div class="chart-card">
         <div class="chart-title">Temperatures</div>
         <div id="chart-temp"></div>
@@ -212,12 +333,6 @@
     <!-- Sidebar -->
     <div id="sidebar">
 
-      <div id="day-nav">
-        <button class="nav-btn" id="btn-prev" onclick="stepDay(-1)">◀ Prev</button>
-        <div id="day-counter">—</div>
-        <button class="nav-btn" id="btn-next" onclick="stepDay(1)">Next ▶</button>
-      </div>
-
       <div>
         <div id="cal-header">
           <button class="cal-nav" onclick="calStep(-1)">◀</button>
@@ -233,9 +348,8 @@
       </div>
 
       <div id="legend-note">
-        Solid = selected day<br>
-        Faint = previous day<br>
-        60-pt rolling average
+        Solid = selected day · Faint = previous day<br>
+        Lines are 60-pt rolling average
       </div>
 
     </div>
@@ -271,24 +385,20 @@ const MONTH_NAMES = ["January","February","March","April","May","June",
 // ─────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────
-let allData  = {};   // "YYYY-MM-DD" → array of row objects
-let allDates = [];   // sorted
+let allData  = {};
+let allDates = [];
 let dayIdx   = 0;
 let calYear  = 0;
 let calMonth = 0;
 
 // ─────────────────────────────────────────────
-// TIMESTAMP PARSING — LOCAL TIME, NO UTC SHIFT
+// TIMESTAMP PARSING — local wall time, no UTC shift
 // ─────────────────────────────────────────────
-// Google Sheets exports timestamps like "6/13/2026 14:35:00" or "2026-06-13 14:35:00"
-// We must NOT use new Date(str) because JS treats date-only strings as UTC
-// and ambiguous strings inconsistently. Parse manually → keep as local wall time.
-
 function parseTimestamp(str) {
   if (!str) return null;
   str = str.trim().replace(/^"|"$/g, "");
 
-  // Try M/D/YYYY H:MM:SS  or  M/D/YYYY H:MM:SS AM/PM
+  // M/D/YYYY H:MM:SS [AM/PM]
   let m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})(?:\s*(AM|PM))?/i);
   if (m) {
     let [, mo, dy, yr, hh, mm, ss, ampm] = m;
@@ -300,13 +410,12 @@ function parseTimestamp(str) {
     return { year: +yr, month: +mo, day: +dy, hour: hh, min: mm, sec: ss };
   }
 
-  // Try YYYY-MM-DD H:MM:SS
+  // YYYY-MM-DD H:MM:SS
   m = str.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/);
   if (m) {
     const [, yr, mo, dy, hh, mm, ss] = m.map(Number);
     return { year: yr, month: mo, day: dy, hour: hh, min: mm, sec: ss };
   }
-
   return null;
 }
 
@@ -322,8 +431,8 @@ function tsToTimeFloat(ts) {
 
 function tsToDisplayDate(dateStr) {
   const [yr, mo, dy] = dateStr.split("-").map(Number);
-  const d = new Date(yr, mo - 1, dy);
-  return d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  return new Date(yr, mo - 1, dy).toLocaleDateString("en-US",
+    { weekday: "short", year: "numeric", month: "short", day: "numeric" });
 }
 
 // ─────────────────────────────────────────────
@@ -366,42 +475,53 @@ function rollingMean(arr, w) {
 }
 
 // ─────────────────────────────────────────────
-// CHART LAYOUT HELPER
+// RESPONSIVE CHART HEIGHT
 // ─────────────────────────────────────────────
-const X_TICKS      = [0,2,4,6,8,10,12,14,16,18,20,22,24];
-const X_TICK_TEXT  = X_TICKS.map(h => String(h).padStart(2,"0") + ":00");
+function chartHeight() {
+  return window.innerWidth <= 720 ? 200 : 260;
+}
+
+// ─────────────────────────────────────────────
+// CHART LAYOUT
+// ─────────────────────────────────────────────
+const X_TICKS     = [0,2,4,6,8,10,12,14,16,18,20,22,24];
+const X_TICK_TEXT = X_TICKS.map(h => String(h).padStart(2,"0") + ":00");
 
 function baseLayout(yTitle, y2Title, y2Color) {
+  const mobile = window.innerWidth <= 720;
   const layout = {
-    margin: { t: 10, b: 40, l: 52, r: y2Title ? 56 : 16 },
+    margin: { t: 8, b: mobile ? 32 : 40, l: mobile ? 42 : 50, r: y2Title ? (mobile ? 44 : 52) : 10 },
     xaxis: {
       range: [0, 24],
-      tickvals: X_TICKS,
-      ticktext: X_TICK_TEXT,
-      tickfont: { size: 10 },
+      tickvals: mobile ? [0,4,8,12,16,20,24] : X_TICKS,
+      ticktext: mobile ? ["0:00","4:00","8:00","12:00","16:00","20:00","24:00"] : X_TICK_TEXT,
+      tickfont: { size: mobile ? 9 : 10 },
       showgrid: true, gridcolor: "#efefef",
-      title: { text: "Time of Day", font: { size: 10 }, standoff: 4 },
+      title: { text: "Time of Day", font: { size: mobile ? 9 : 10 }, standoff: 2 },
     },
     yaxis: {
-      title: { text: yTitle, font: { size: 11 } },
+      title: { text: yTitle, font: { size: mobile ? 9 : 11 } },
       showgrid: true, gridcolor: "#efefef", zeroline: false,
       autorange: true,
+      tickfont: { size: mobile ? 9 : 10 },
     },
     legend: {
-      orientation: "h", y: 1.08, x: 0,
-      font: { size: 10 }, bgcolor: "rgba(255,255,255,0.8)",
+      orientation: "h",
+      y: 1.08, x: 0,
+      font: { size: mobile ? 9 : 10 },
+      bgcolor: "rgba(255,255,255,0.85)",
     },
     plot_bgcolor: "white",
     paper_bgcolor: "white",
-    height: 260,
+    height: chartHeight(),
     hovermode: "x unified",
   };
   if (y2Title) {
     layout.yaxis2 = {
-      title: { text: y2Title, font: { size: 11, color: y2Color } },
+      title: { text: y2Title, font: { size: mobile ? 9 : 11, color: y2Color } },
       overlaying: "y", side: "right",
       showgrid: false, zeroline: false,
-      tickfont: { color: y2Color },
+      tickfont: { color: y2Color, size: mobile ? 9 : 10 },
       autorange: true,
     };
   }
@@ -409,123 +529,108 @@ function baseLayout(yTitle, y2Title, y2Color) {
 }
 
 // ─────────────────────────────────────────────
-// EXTRACT X/Y for a column from a day's rows
+// TRACE BUILDERS
 // ─────────────────────────────────────────────
 function extractXY(rows, colName) {
   const x = [], y = [];
   for (const r of rows) {
-    const tf = r._timeFloat;
-    const v  = parseFloat(r[colName]);
-    if (tf !== null && !isNaN(v)) { x.push(tf); y.push(v); }
+    const v = parseFloat(r[colName]);
+    if (r._timeFloat !== null && !isNaN(v)) { x.push(r._timeFloat); y.push(v); }
   }
   return { x, y };
 }
 
-// ─────────────────────────────────────────────
-// TRACE BUILDERS
-// ─────────────────────────────────────────────
 function makeTrace(x, y, label, color, lw, dash, yaxis, faint) {
   const sm = rollingMean(y, SMOOTH_WINDOW);
   const traces = [];
-
   if (!faint) {
-    // Raw faint background
     traces.push({
-      x, y,
-      mode: "lines",
+      x, y, mode: "lines",
       line: { color, width: 0.5 },
-      opacity: 0.18,
-      showlegend: false,
-      hoverinfo: "skip",
+      opacity: 0.18, showlegend: false, hoverinfo: "skip",
     });
   }
-
   traces.push({
-    x, y: sm,
-    mode: "lines",
-    line: { color, width: faint ? 1.1 : lw, dash: faint ? "dot" : (dash || "solid") },
+    x, y: sm, mode: "lines",
+    line: { color, width: faint ? 1.0 : lw, dash: faint ? "dot" : (dash || "solid") },
     opacity: faint ? 0.28 : 1.0,
     name: label + (faint ? " (prev)" : ""),
     showlegend: !faint,
     yaxis: yaxis || "y",
   });
-
   return traces;
 }
 
 function buildTempTraces(rows, faint) {
   const series = [
-    { key: COL.temp_spa,    label: "Spa Temp",     color: "#d62728" },
-    { key: COL.temp_pool,   label: "Pool Temp",    color: "#1f77b4" },
-    { key: COL.temp_nosun,  label: "Water No Sun", color: "#17becf" },
-    { key: COL.temp_out,    label: "Outdoor Temp", color: "#e6a817" },
+    { key: COL.temp_spa,   label: "Spa Temp",     color: "#d62728" },
+    { key: COL.temp_pool,  label: "Pool Temp",    color: "#1f77b4" },
+    { key: COL.temp_nosun, label: "Water No Sun", color: "#17becf" },
+    { key: COL.temp_out,   label: "Outdoor Temp", color: "#e6a817" },
   ];
-  const traces = [];
-  for (const s of series) {
+  return series.flatMap(s => {
     const { x, y } = extractXY(rows, s.key);
-    traces.push(...makeTrace(x, y, s.label, s.color, 2.2, "solid", "y", faint));
-  }
-  return traces;
+    return makeTrace(x, y, s.label, s.color, 2.0, "solid", "y", faint);
+  });
 }
 
 function buildSolarTraces(rows, faint) {
-  const traces = [];
   const { x: xs, y: ys } = extractXY(rows, COL.solar);
   const { x: xu, y: yu } = extractXY(rows, COL.uv);
-  traces.push(...makeTrace(xs, ys, "Solar (W/m²)", "#f4a500", 1.8, "solid", "y",  faint));
-  traces.push(...makeTrace(xu, yu, "UV Index",     "#b44fd4", 1.5, "dash",  "y2", faint));
-  return traces;
+  return [
+    ...makeTrace(xs, ys, "Solar (W/m²)", "#f4a500", 1.8, "solid", "y",  faint),
+    ...makeTrace(xu, yu, "UV Index",     "#b44fd4", 1.5, "dash",  "y2", faint),
+  ];
 }
 
 function buildWindTraces(rows, faint) {
-  const traces = [];
   const { x: xs, y: ys } = extractXY(rows, COL.wind_speed);
   const { x: xg, y: yg } = extractXY(rows, COL.wind_gust);
-  traces.push(...makeTrace(xs, ys, "Wind Speed", "#2ca02c", 1.8, "solid", "y", faint));
-  traces.push(...makeTrace(xg, yg, "Wind Gust",  "#98df8a", 1.4, "dot",   "y", faint));
-  return traces;
+  return [
+    ...makeTrace(xs, ys, "Wind Speed", "#2ca02c", 1.8, "solid", "y", faint),
+    ...makeTrace(xg, yg, "Wind Gust",  "#98df8a", 1.4, "dot",   "y", faint),
+  ];
 }
 
 function buildHumidityTraces(rows, faint) {
-  const traces = [];
   const { x: xo, y: yo } = extractXY(rows, COL.humidity_out);
   const { x: xi, y: yi } = extractXY(rows, COL.humidity_in);
   const { x: xv, y: yv } = extractXY(rows, COL.vpd);
-  traces.push(...makeTrace(xo, yo, "Outdoor Humidity", "#1f77b4", 1.8, "solid", "y",  faint));
-  traces.push(...makeTrace(xi, yi, "Indoor Humidity",  "#aec7e8", 1.3, "dot",   "y",  faint));
-  traces.push(...makeTrace(xv, yv, "VPD",              "#8c564b", 1.5, "dash",  "y2", faint));
-  return traces;
+  return [
+    ...makeTrace(xo, yo, "Outdoor Humidity", "#1f77b4", 1.8, "solid", "y",  faint),
+    ...makeTrace(xi, yi, "Indoor Humidity",  "#aec7e8", 1.3, "dot",   "y",  faint),
+    ...makeTrace(xv, yv, "VPD",              "#8c564b", 1.5, "dash",  "y2", faint),
+  ];
 }
 
 // ─────────────────────────────────────────────
 // STATS
 // ─────────────────────────────────────────────
 function calcStats(rows) {
-  const vals = key => rows.map(r => parseFloat(r[key])).filter(v => !isNaN(v));
+  const vals   = key => rows.map(r => parseFloat(r[key])).filter(v => !isNaN(v));
   const minMax = key => { const v = vals(key); return v.length ? `${Math.min(...v).toFixed(1)} / ${Math.max(...v).toFixed(1)}` : "—"; };
   const peak   = key => { const v = vals(key); return v.length ? Math.max(...v).toFixed(1) : "—"; };
   const avg    = key => { const v = vals(key); return v.length ? (v.reduce((a,b)=>a+b,0)/v.length).toFixed(1) : "—"; };
-
   return [
-    { label: "Spa Temp (min/max °F)",      val: minMax(COL.temp_spa)    },
-    { label: "Pool Temp (min/max °F)",     val: minMax(COL.temp_pool)   },
-    { label: "Outdoor Temp (min/max °F)",  val: minMax(COL.temp_out)    },
-    { label: "Peak Solar (W/m²)",          val: peak(COL.solar)         },
-    { label: "Peak UV Index",              val: peak(COL.uv)            },
-    { label: "Max Wind Gust (mph)",        val: peak(COL.wind_gust)     },
-    { label: "Avg Outdoor Humidity (%)",   val: avg(COL.humidity_out)   },
-    { label: "Avg VPD (kPa)",             val: avg(COL.vpd)            },
+    { label: "Spa Temp min/max °F",     val: minMax(COL.temp_spa)    },
+    { label: "Pool Temp min/max °F",    val: minMax(COL.temp_pool)   },
+    { label: "Outdoor Temp min/max °F", val: minMax(COL.temp_out)    },
+    { label: "Peak Solar W/m²",         val: peak(COL.solar)         },
+    { label: "Peak UV",                 val: peak(COL.uv)            },
+    { label: "Max Gust mph",            val: peak(COL.wind_gust)     },
+    { label: "Avg Humidity %",          val: avg(COL.humidity_out)   },
+    { label: "Avg VPD kPa",            val: avg(COL.vpd)            },
   ];
 }
 
 function renderStats(rows) {
-  const stats = calcStats(rows);
-  document.getElementById("stats-content").innerHTML = stats.map(s =>
-    `<div class="stat-row">
-       <span class="stat-label">${s.label}</span>
-       <span class="stat-val">${s.val}</span>
-     </div>`
-  ).join("");
+  document.getElementById("stats-content").innerHTML =
+    calcStats(rows).map(s =>
+      `<div class="stat-row">
+         <span class="stat-label">${s.label}</span>
+         <span class="stat-val">${s.val}</span>
+       </div>`
+    ).join("");
 }
 
 // ─────────────────────────────────────────────
@@ -540,17 +645,14 @@ function renderCharts() {
   const currRows = allData[curr] || [];
   const prevRows = prev ? (allData[prev] || []) : [];
 
-  const build = (builderFn, divId, yLabel, y2Label, y2Color) => {
+  const build = (fn, id, y1, y2, y2c) => {
     const traces = [
-      ...(prevRows.length ? builderFn(prevRows, true) : []),
-      ...builderFn(currRows, false),
+      ...(prevRows.length ? fn(prevRows, true) : []),
+      ...fn(currRows, false),
     ];
-    const layout = baseLayout(yLabel, y2Label, y2Color);
-    if (chartsReady) {
-      Plotly.react(divId, traces, layout, CFG);
-    } else {
-      Plotly.newPlot(divId, traces, layout, CFG);
-    }
+    const layout = baseLayout(y1, y2, y2c);
+    chartsReady ? Plotly.react(id, traces, layout, CFG)
+                : Plotly.newPlot(id, traces, layout, CFG);
   };
 
   build(buildTempTraces,     "chart-temp",     "°F");
@@ -561,9 +663,9 @@ function renderCharts() {
 
   renderStats(currRows);
 
-  // Update header / counters
-  document.getElementById("date-display").textContent = tsToDisplayDate(curr);
-  document.getElementById("day-counter").textContent  = `Day ${dayIdx + 1} of ${allDates.length}`;
+  const display = tsToDisplayDate(curr);
+  document.getElementById("date-display").textContent  = display;
+  document.getElementById("day-counter").textContent   = `${curr}  [${dayIdx+1}/${allDates.length}]`;
   document.getElementById("btn-prev").disabled = dayIdx <= 0;
   document.getElementById("btn-next").disabled = dayIdx >= allDates.length - 1;
 
@@ -575,8 +677,8 @@ function renderCharts() {
 // ─────────────────────────────────────────────
 function stepDay(delta) {
   dayIdx = Math.max(0, Math.min(allDates.length - 1, dayIdx + delta));
-  const d = allDates[dayIdx].split("-").map(Number);
-  calYear  = d[0]; calMonth = d[1] - 1;
+  const [y, m] = allDates[dayIdx].split("-").map(Number);
+  calYear = y; calMonth = m - 1;
   renderCharts();
 }
 
@@ -584,10 +686,45 @@ function jumpToDate(dateStr) {
   const idx = allDates.indexOf(dateStr);
   if (idx === -1) return;
   dayIdx = idx;
-  const d = dateStr.split("-").map(Number);
-  calYear  = d[0]; calMonth = d[1] - 1;
+  const [y, m] = dateStr.split("-").map(Number);
+  calYear = y; calMonth = m - 1;
   renderCharts();
 }
+
+// ─────────────────────────────────────────────
+// SIDEBAR TOGGLE (mobile)
+// ─────────────────────────────────────────────
+function toggleSidebar() {
+  const sidebar = document.getElementById("sidebar");
+  sidebar.classList.toggle("open");
+}
+
+// ─────────────────────────────────────────────
+// SWIPE TO CHANGE DAY
+// ─────────────────────────────────────────────
+(function initSwipe() {
+  let startX = null;
+  const col = document.getElementById("charts-col");
+
+  // We wait until dashboard is visible before wiring up,
+  // but we can attach to body and check
+  document.addEventListener("touchstart", e => {
+    startX = e.touches[0].clientX;
+  }, { passive: true });
+
+  document.addEventListener("touchend", e => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    startX = null;
+    // Only trigger for meaningful horizontal swipes (>60px)
+    if (Math.abs(dx) < 60) return;
+    // Don't trigger if swiping on the calendar or sidebar
+    const target = e.target;
+    if (target.closest("#sidebar") || target.closest("#cal-grid")) return;
+    if (dx < 0) stepDay(1);   // swipe left → next day
+    else         stepDay(-1);  // swipe right → prev day
+  }, { passive: true });
+})();
 
 // ─────────────────────────────────────────────
 // CALENDAR
@@ -620,7 +757,7 @@ function drawCalendar() {
 
   for (let i = 0; i < startOffset; i++) {
     const el = document.createElement("div");
-    el.className = "cal-day empty"; el.textContent = " ";
+    el.className = "cal-day empty";
     grid.appendChild(el);
   }
 
@@ -632,11 +769,24 @@ function drawCalendar() {
     if (availSet.has(iso)) {
       el.classList.add("has-data");
       if (iso === selected) el.classList.add("selected");
-      el.onclick = () => jumpToDate(iso);
+      el.onclick = () => { jumpToDate(iso); closeSidebarOnMobile(); };
     }
     grid.appendChild(el);
   }
 }
+
+function closeSidebarOnMobile() {
+  if (window.innerWidth <= 720) {
+    document.getElementById("sidebar").classList.remove("open");
+  }
+}
+
+// Rerender charts on resize (height changes)
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { if (chartsReady) renderCharts(); }, 250);
+});
 
 // ─────────────────────────────────────────────
 // FETCH & INIT
@@ -646,10 +796,8 @@ function drawCalendar() {
     const url  = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(TAB_NAME)}`;
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const text = await resp.text();
-    const rows = parseCSV(text);
+    const rows = parseCSV(await resp.text());
 
-    // Parse timestamps locally (no UTC conversion) and group by date
     for (const row of rows) {
       const ts = parseTimestamp(row[COL.timestamp]);
       if (!ts) continue;
@@ -664,9 +812,8 @@ function drawCalendar() {
     if (!allDates.length) throw new Error("No valid rows found");
 
     dayIdx = allDates.length - 1;
-    const latest = allDates[allDates.length - 1].split("-").map(Number);
-    calYear  = latest[0];
-    calMonth = latest[1] - 1;
+    const [y, m] = allDates[allDates.length - 1].split("-").map(Number);
+    calYear = y; calMonth = m - 1;
 
     document.getElementById("loading").style.display   = "none";
     document.getElementById("dashboard").style.display = "block";
@@ -674,8 +821,8 @@ function drawCalendar() {
 
   } catch (err) {
     document.getElementById("loading").innerHTML =
-      `<div style="color:#c00;text-align:center">
-         Error loading data. Check console and ensure Spreadsheet ID is correct and public.<br>
+      `<div style="color:#c00;text-align:center;padding:20px">
+         Error loading data.<br>
          <small style="color:#888">${err.message}</small>
        </div>`;
     console.error(err);
