@@ -104,6 +104,9 @@
     grid-template-columns: 1fr 240px;
     align-items: start;
   }
+  /* Sidebar always occupies column 2 on desktop regardless of DOM order */
+  #sidebar    { grid-column: 2; grid-row: 1; }
+  #charts-col { grid-column: 1; grid-row: 1; }
 
   /* ── Charts column ── */
   #charts-col {
@@ -299,18 +302,17 @@
 
     #day-nav-bar { top: 40px; padding: 6px 10px; gap: 6px; }
 
-    /* No sidebar toggle button on mobile — sidebar is always visible at top */
-    #sidebar-toggle-desktop { display: none; }
-
+    /* Single column, sidebar floats above charts */
     #main-layout {
-      grid-template-columns: 1fr;
       display: flex;
       flex-direction: column;
     }
 
-    /* Sidebar sits ABOVE charts on mobile, always visible, no collapse */
+    /* Sidebar: always visible above charts, no sticky, no collapse */
     #sidebar {
-      order: -1; /* Push above charts */
+      grid-column: unset;
+      grid-row: unset;
+      order: -1;
       position: static;
       max-height: none;
       overflow-y: visible;
@@ -319,20 +321,17 @@
       padding: 12px 10px;
     }
 
-    /* Sidebar inner layout: two-column on mobile to save vertical space */
+    /* Sidebar inner layout: vertical stack — stats first, then calendar */
     #sidebar-top-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      align-items: start;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
-    #stats-box {
-      /* stats box beside calendar on mobile */
-    }
-
-    /* Charts take full width, shorter on mobile */
+    /* Charts below sidebar */
     #charts-col {
+      grid-column: unset;
+      grid-row: unset;
       order: 1;
       padding: 6px;
       gap: 6px;
@@ -345,13 +344,6 @@
 
     /* Swipe hint visible */
     #swipe-hint { display: block; }
-  }
-
-  /* On very narrow screens, stack sidebar sections vertically */
-  @media (max-width: 400px) {
-    #sidebar-top-row {
-      grid-template-columns: 1fr !important;
-    }
   }
 </style>
 </head>
@@ -389,22 +381,23 @@
 
   <div id="main-layout">
 
-    <!-- Sidebar: above charts on mobile, beside on desktop -->
+    <!-- Sidebar: above charts on mobile, right column on desktop -->
     <div id="sidebar">
-      <!-- Two-col layout on mobile -->
       <div id="sidebar-top-row">
-        <div>
+        <!-- Stats first (shows at top on mobile) -->
+        <div id="stats-box">
+          <h3>Daily Summary</h3>
+          <div id="stats-content">—</div>
+        </div>
+
+        <!-- Calendar below stats on mobile, below stats on desktop too -->
+        <div id="cal-wrap">
           <div id="cal-header">
             <button class="cal-nav" onclick="calStep(-1)">◀</button>
             <span id="cal-month-label">—</span>
             <button class="cal-nav" onclick="calStep(1)">▶</button>
           </div>
           <div id="cal-grid"></div>
-        </div>
-
-        <div id="stats-box">
-          <h3>Daily Summary</h3>
-          <div id="stats-content">—</div>
         </div>
       </div>
 
@@ -614,8 +607,7 @@ function baseLayout(yTitle, y2Title, y2Color, fullscreen) {
     paper_bgcolor: "white",
     height: fullscreen ? null : chartHeight(),
     hovermode: "x unified",
-    // ── FIX 3: pinch-zoom (dragmode: zoom) and disable box select ──
-    dragmode: "zoom",
+    dragmode: isMobile() ? "pan" : "zoom",
   };
   if (y2Title) {
     layout.yaxis2 = {
@@ -760,10 +752,22 @@ function renderStats(rows) {
 }
 
 // ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 720; }
+
+// ─────────────────────────────────────────────
 // RENDER CHARTS
 // ─────────────────────────────────────────────
-const CFG = { responsive: true, displayModeBar: false };
-// Enable zoom via scroll/pinch but no toolbar
+// scrollZoom: true enables pinch-to-zoom on touch devices.
+// displayModeBar: false hides the toolbar (which has box-select by default).
+// dragmode is set to 'pan' on mobile in the layout so finger drags pan, not box-select.
+const CFG = {
+  responsive: true,
+  displayModeBar: false,
+  scrollZoom: true,         // enables pinch-zoom on touch
+};
+
 const CFG_FULLSCREEN = {
   responsive: true,
   displayModeBar: true,
