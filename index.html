@@ -1,319 +1,248 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ecowitt Dashboard v7</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ecowitt Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <style>
-  /* ── Reset & Base ─────────────────────────────────── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: #f5f5f5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f4f6f9;
     color: #222;
     min-height: 100vh;
   }
 
-  /* ── Header ──────────────────────────────────────── */
-  #header {
+  header {
     background: #1a1a2e;
-    color: #fff;
+    color: white;
     padding: 12px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
   }
-  #header h1 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-  }
-  #header-date {
-    font-size: 0.9rem;
-    color: #aac4ff;
-    font-weight: 600;
-  }
+  header h1 { font-size: 1.15rem; font-weight: 600; }
+  header #date-display { font-size: 0.9rem; color: #a0b4cc; }
 
-  /* ── Layout ──────────────────────────────────────── */
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 230px;
-    gap: 0;
-    height: calc(100vh - 50px);
-    min-height: 600px;
-  }
-
-  /* ── Charts column ───────────────────────────────── */
-  #charts-col {
-    display: flex;
-    flex-direction: column;
-    padding: 8px 8px 8px 8px;
-    gap: 4px;
-    overflow-y: auto;
-    background: #fff;
-  }
-
-  .chart-wrapper {
-    position: relative;
-    flex: 1 1 0;
-    min-height: 160px;
-  }
-
-  .chart-wrapper .plotly-graph-div {
-    width: 100% !important;
-    height: 100% !important;
-  }
-
-  /* ── Sidebar ─────────────────────────────────────── */
-  #sidebar {
-    background: #f0f4ff;
-    border-left: 1px solid #d0d8ee;
-    display: flex;
-    flex-direction: column;
-    padding: 12px 10px 10px;
-    gap: 14px;
-    overflow-y: auto;
-  }
-
-  /* ── Loading / Error ─────────────────────────────── */
-  #loading-overlay {
-    position: fixed;
-    inset: 0;
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 999;
-    gap: 12px;
-    font-size: 1rem;
-    color: #444;
+  #loading {
+    display: flex; align-items: center; justify-content: center;
+    height: 60vh; font-size: 1.1rem; color: #666;
+    flex-direction: column; gap: 12px;
   }
   .spinner {
-    width: 42px; height: 42px;
-    border: 4px solid #dde3f0;
-    border-top-color: #1f77b4;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    width: 36px; height: 36px;
+    border: 4px solid #ddd; border-top-color: #1f77b4;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── Calendar ────────────────────────────────────── */
-  #cal-header {
+  #dashboard { display: none; }
+
+  /* ── Main layout: charts left, sidebar right ── */
+  #main-layout {
+    display: flex;
+    gap: 0;
+    align-items: flex-start;
+  }
+
+  #charts-col {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 0 8px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    padding: 10px 10px 10px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ── Nav controls ── */
+  #controls {
     display: flex;
     align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .nav-btn {
+    padding: 6px 14px;
+    border: 1.5px solid #1f77b4;
+    border-radius: 6px;
+    background: white; color: #1f77b4;
+    font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { background: #1f77b4; color: white; }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .nav-btn:disabled:hover { background: white; color: #1f77b4; }
+  #day-label {
+    flex: 1; text-align: center;
+    font-size: 0.95rem; font-weight: 700; color: #1a1a2e;
+  }
+
+  /* ── Calendar ── */
+  #cal-wrap {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 10px 8px;
+  }
+  #cal-month-nav {
+    display: flex; align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
   #cal-month-label {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #1a1a2e;
+    font-weight: 700; font-size: 0.88rem;
+    color: #1a1a2e; text-align: center; flex: 1;
   }
-  .cal-nav-btn {
-    background: none;
-    border: 1px solid #bbc8e8;
-    border-radius: 4px;
-    cursor: pointer;
-    padding: 2px 7px;
-    font-size: 0.8rem;
-    color: #333;
-    line-height: 1.4;
+  .cal-nav {
+    background: none; border: none;
+    font-size: 1rem; cursor: pointer;
+    color: #1f77b4; padding: 2px 6px;
   }
-  .cal-nav-btn:hover { background: #dce6ff; }
-
+  .cal-nav:hover { color: #0a3d6b; }
   #cal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
+    gap: 3px;
   }
   .cal-dow {
-    text-align: center;
-    font-size: 0.65rem;
-    font-weight: 700;
-    color: #888;
-    padding: 2px 0 4px;
+    text-align: center; font-size: 0.68rem;
+    font-weight: 700; color: #888; padding: 2px 0;
   }
   .cal-day {
-    text-align: center;
-    font-size: 0.72rem;
-    border-radius: 4px;
-    padding: 4px 0;
-    cursor: default;
-    user-select: none;
-    color: #bbb;
-    background: #e8eaf0;
-    line-height: 1.3;
+    text-align: center; padding: 5px 2px;
+    border-radius: 5px; font-size: 0.78rem;
+    background: #f0f0f0; color: #bbb;
+    cursor: default; user-select: none;
   }
   .cal-day.has-data {
-    background: #cce5ff;
-    color: #003366;
-    font-weight: 700;
-    cursor: pointer;
+    background: #deeeff; color: #003366;
+    font-weight: 700; cursor: pointer;
+    transition: background 0.12s;
   }
-  .cal-day.has-data:hover { background: #99ccff; }
-  .cal-day.selected {
-    background: #1f77b4 !important;
-    color: #fff !important;
-  }
-  .cal-day.empty { background: transparent; }
+  .cal-day.has-data:hover { background: #b3d4f5; }
+  .cal-day.selected { background: #1f77b4 !important; color: white !important; }
+  .cal-day.empty { background: transparent; color: transparent; }
 
-  /* ── Day nav buttons ─────────────────────────────── */
-  #day-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-  }
-  .day-nav-btn {
-    background: #1a1a2e;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    padding: 6px 10px;
-    font-size: 0.78rem;
-    cursor: pointer;
-    flex: 0 0 auto;
-  }
-  .day-nav-btn:disabled { background: #ccc; cursor: default; }
-  .day-nav-btn:not(:disabled):hover { background: #2e2e5e; }
-  #day-counter {
-    font-size: 0.75rem;
-    color: #555;
-    text-align: center;
-    flex: 1;
-  }
-
-  /* ── Stats panel ─────────────────────────────────── */
-  #stats-box {
-    background: #fff;
-    border: 1px solid #d0d8ee;
+  /* ── Legend hint ── */
+  #overlay-legend {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 8px;
+    font-size: 0.75rem; color: #888;
+    background: white;
     border-radius: 6px;
-    padding: 10px;
-    font-size: 0.75rem;
-    flex: 1;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
-  #stats-box h3 {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: #1a1a2e;
-    margin-bottom: 8px;
-    border-bottom: 1px solid #e0e6f5;
-    padding-bottom: 4px;
-  }
-  .stat-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 3px 0;
-    border-bottom: 1px dashed #eee;
-    color: #333;
-  }
-  .stat-row:last-child { border-bottom: none; }
-  .stat-label { color: #666; }
-  .stat-val { font-weight: 700; }
+  .legend-line { width: 24px; height: 2px; background: #999; opacity: 0.4; border-top: 2px dotted #999; }
 
-  /* ── Legend note ─────────────────────────────────── */
-  #legend-note {
-    font-size: 0.68rem;
-    color: #888;
-    text-align: center;
-    line-height: 1.5;
+  /* ── Chart cards ── */
+  .chart-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  .chart-title {
+    padding: 7px 12px 3px;
+    font-size: 0.78rem; font-weight: 700;
+    color: #555; border-bottom: 1px solid #f0f0f0;
+    text-transform: uppercase; letter-spacing: 0.04em;
   }
 
-  /* ── Responsive ──────────────────────────────────── */
   @media (max-width: 700px) {
-    #app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-    #sidebar { flex-direction: row; flex-wrap: wrap; height: auto; }
+    #main-layout { flex-direction: column; }
+    #sidebar { width: 100%; padding: 8px; flex-direction: row; flex-wrap: wrap; }
+    #cal-wrap { flex: 1; min-width: 220px; }
   }
 </style>
 </head>
 <body>
 
-<!-- Loading -->
-<div id="loading-overlay">
+<header>
+  <h1>🌡 Ecowitt Dashboard</h1>
+  <div id="date-display">Loading…</div>
+</header>
+
+<div id="loading">
   <div class="spinner"></div>
-  <span id="loading-msg">Fetching weather data…</span>
+  <div>Fetching data from Google Sheets…</div>
 </div>
 
-<!-- Header -->
-<div id="header">
-  <h1>🌤 Ecowitt Weather Dashboard</h1>
-  <span id="header-date">—</span>
-</div>
-
-<!-- Main layout -->
-<div id="app">
-  <!-- Charts -->
-  <div id="charts-col">
-    <div class="chart-wrapper" id="chart-temp"></div>
-    <div class="chart-wrapper" id="chart-solar"></div>
-    <div class="chart-wrapper" id="chart-wind"></div>
-    <div class="chart-wrapper" id="chart-humidity"></div>
+<div id="dashboard">
+  <div id="controls">
+    <button class="nav-btn" id="btn-prev" onclick="stepDay(-1)">◀ Prev</button>
+    <div id="day-label">—</div>
+    <button class="nav-btn" id="btn-next" onclick="stepDay(1)">Next ▶</button>
   </div>
 
-  <!-- Sidebar -->
-  <div id="sidebar">
-
-    <!-- Day navigation -->
-    <div id="day-nav">
-      <button class="day-nav-btn" id="btn-prev" disabled>◀ Prev</button>
-      <div id="day-counter">—</div>
-      <button class="day-nav-btn" id="btn-next" disabled>Next ▶</button>
-    </div>
-
-    <!-- Calendar -->
-    <div>
-      <div id="cal-header">
-        <button class="cal-nav-btn" id="cal-prev">◀</button>
-        <span id="cal-month-label">—</span>
-        <button class="cal-nav-btn" id="cal-next">▶</button>
+  <div id="main-layout">
+    <!-- Charts column -->
+    <div id="charts-col">
+      <div class="chart-card">
+        <div class="chart-title">Temperatures</div>
+        <div id="chart-temp"></div>
       </div>
-      <div id="cal-grid"></div>
+      <div class="chart-card">
+        <div class="chart-title">Solar Radiation &amp; UV Index</div>
+        <div id="chart-solar"></div>
+      </div>
     </div>
 
-    <!-- Daily stats -->
-    <div id="stats-box">
-      <h3>Daily Summary</h3>
-      <div id="stats-content">Select a day to see stats.</div>
+    <!-- Sidebar: calendar + legend -->
+    <div id="sidebar">
+      <div id="cal-wrap">
+        <div id="cal-month-nav">
+          <button class="cal-nav" onclick="calStep(-1)">◀</button>
+          <div id="cal-month-label"></div>
+          <button class="cal-nav" onclick="calStep(1)">▶</button>
+        </div>
+        <div id="cal-grid"></div>
+      </div>
+      <div id="overlay-legend">
+        <div class="legend-line"></div>
+        <span>Dotted = previous day</span>
+      </div>
     </div>
-
-    <!-- Legend note -->
-    <div id="legend-note">
-      Solid line = selected day<br>
-      Faint line = previous day<br>
-      Lines are 60-pt rolling average
-    </div>
-
   </div>
 </div>
 
 <script>
 // ─────────────────────────────────────────────
-// CONFIG  (mirrors Python script)
+// CONFIG
 // ─────────────────────────────────────────────
 const SPREADSHEET_ID = "1Ru8OhlbwrGnCcVc-EbtakgnzVRNlTuBzTCNGd9g4IbU";
 const TAB_NAME       = "Ecowitt Data";
 const SMOOTH_WINDOW  = 60;
 
 const COL = {
-  timestamp:    "Timestamp (Local)",
-  temp_spa:     "Spa Temp (F)",
-  temp_pool:    "Pool Temp (F)",
-  temp_nosun:   "Water No Sun (F)",
-  temp_out:     "Outdoor Temp (°F)",
-  temp_in:      "Indoor Temp (°F)",
-  wind_speed:   "Wind Speed (mph)",
-  wind_gust:    "Wind Gust (mph)",
-  solar:        "Solar Radiation (W/m²)",
-  uv:           "UV Index",
-  humidity_out: "Outdoor Humidity (%)",
-  humidity_in:  "Indoor Humidity (%)",
-  vpd:          "VPD (kPa)",
+  timestamp:  "Timestamp (Local)",
+  temp_spa:   "Spa Temp (F)",
+  temp_pool:  "Pool Temp (F)",
+  temp_nosun: "Water No Sun (F)",
+  temp_out:   "Outdoor Temp (°F)",
+  solar:      "Solar Radiation (W/m²)",
+  uv:         "UV Index",
 };
+
+const TEMP_SERIES = [
+  { label: "Spa Temp",     key: "temp_spa",   color: "#d62728" },
+  { label: "Pool Temp",    key: "temp_pool",  color: "#1f77b4" },
+  { label: "Water No Sun", key: "temp_nosun", color: "#17becf" },
+  { label: "Outdoor Temp", key: "temp_out",   color: "#e6a817" },
+];
 
 const MONTH_NAMES = ["January","February","March","April","May","June",
                      "July","August","September","October","November","December"];
@@ -321,436 +250,331 @@ const MONTH_NAMES = ["January","February","March","April","May","June",
 // ─────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────
-let allRows    = [];    // parsed rows [{ts, date, cols...}]
-let allDates   = [];    // sorted unique date strings "YYYY-MM-DD"
-let dateSet    = new Set();
-let dateToRows = {};    // "YYYY-MM-DD" → [rows]
-let dayIdx     = 0;
-let calYear    = 0;
-let calMonth   = 0;    // 0-based
+// smoothedByDate[dateStr][colKey] = { x: [...hours], y: [...smoothed values] }
+let smoothedByDate = {};
+let allDates       = [];
+let dayIdx         = 0;
+let calYear        = 0;
+let calMonth       = 0;
 
 // ─────────────────────────────────────────────
-// CSV FETCH & PARSE
+// UTILS
 // ─────────────────────────────────────────────
-async function fetchData() {
-  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(TAB_NAME)}`;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  return resp.text();
-}
-
 function parseCSV(text) {
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) throw new Error("Empty CSV");
-
-  // Parse header — handle quoted fields
-  const headers = splitCSVRow(lines[0]);
-
-  const tsIdx = headers.indexOf(COL.timestamp);
-  if (tsIdx === -1) throw new Error("Timestamp column not found");
-
-  const colIdx = {};
-  for (const [key, name] of Object.entries(COL)) {
-    const i = headers.indexOf(name);
-    if (i !== -1) colIdx[key] = i;
-  }
-
-  const rows = [];
-  for (let li = 1; li < lines.length; li++) {
-    const fields = splitCSVRow(lines[li]);
-    const tsRaw  = fields[tsIdx];
-    const ts     = new Date(tsRaw);
-    if (isNaN(ts)) continue;
-
-    const row = { ts };
-    row.date = ts.toISOString().slice(0, 10);   // "YYYY-MM-DD"
-    row.timeH = ts.getHours() + ts.getMinutes() / 60 + ts.getSeconds() / 3600;
-
-    for (const [key, idx] of Object.entries(colIdx)) {
-      if (key === "timestamp") continue;
-      const v = parseFloat(fields[idx]);
-      row[key] = isNaN(v) ? null : v;
+  const lines = text.trim().split("\n");
+  const headers = lines[0].split(",").map(h => h.replace(/^"|"$/g, "").trim());
+  return lines.slice(1).map(line => {
+    const cols = [];
+    let cur = "", inQ = false;
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur); cur = ""; }
+      else { cur += ch; }
     }
-    rows.push(row);
-  }
-
-  rows.sort((a, b) => a.ts - b.ts);
-  return rows;
+    cols.push(cur);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (cols[i] || "").replace(/^"|"$/g, "").trim(); });
+    return obj;
+  });
 }
 
-function splitCSVRow(line) {
-  const fields = [];
-  let cur = "", inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (c === '"') { inQ = !inQ; }
-    else if (c === ',' && !inQ) { fields.push(cur.trim()); cur = ""; }
-    else { cur += c; }
-  }
-  fields.push(cur.trim());
-  return fields;
+function toTimeFloat(dateStr) {
+  const d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
 }
 
-// ─────────────────────────────────────────────
-// SMOOTHING  (rolling average)
-// ─────────────────────────────────────────────
+function toDateStr(dateStr) {
+  const d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  return d.toISOString().slice(0, 10);
+}
+
 function rollingMean(arr, w) {
-  const out = new Array(arr.length).fill(null);
-  for (let i = 0; i < arr.length; i++) {
-    const half  = Math.floor(w / 2);
+  const half = Math.floor(w / 2);
+  return arr.map((_, i) => {
     const start = Math.max(0, i - half);
-    const end   = Math.min(arr.length - 1, i + half);
-    let sum = 0, count = 0;
-    for (let j = start; j <= end; j++) {
-      if (arr[j] !== null) { sum += arr[j]; count++; }
-    }
-    out[i] = count > 0 ? sum / count : null;
-  }
-  return out;
+    const end   = Math.min(arr.length, i + half + 1);
+    const slice = arr.slice(start, end).filter(v => v !== null && !isNaN(v));
+    return slice.length ? slice.reduce((a, b) => a + b, 0) / slice.length : null;
+  });
 }
 
-// ─────────────────────────────────────────────
-// PLOTLY CHART HELPERS
-// ─────────────────────────────────────────────
-const CHART_LAYOUT_BASE = {
-  margin: { l: 52, r: 52, t: 32, b: 36 },
-  plot_bgcolor:  "#ffffff",
-  paper_bgcolor: "#ffffff",
-  font: { family: "'Segoe UI', system-ui, sans-serif", size: 11, color: "#333" },
-  xaxis: {
-    range: [0, 24],
-    dtick: 2,
-    tickformat: "d",
-    ticksuffix: ":00",
-    gridcolor: "#e8eaf0",
-    gridwidth: 1,
-    zeroline: false,
-    title: { text: "Time of Day", standoff: 6 },
-  },
-  showlegend: true,
-  legend: { x: 0.01, y: 0.99, bgcolor: "rgba(255,255,255,0.85)",
-            bordercolor: "#ccc", borderwidth: 1, font: { size: 10 } },
-};
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
-function makeLayout(title, yLabel, yLabel2, yColor2) {
-  const layout = JSON.parse(JSON.stringify(CHART_LAYOUT_BASE));
-  layout.title = { text: `<b>${title}</b>`, x: 0.01, xanchor: "left", font: { size: 12 } };
-  layout.yaxis  = { title: { text: yLabel }, gridcolor: "#e8eaf0", zeroline: false };
-  if (yLabel2) {
+const X_TICKS      = [0,2,4,6,8,10,12,14,16,18,20,22,24];
+const X_TICK_TEXTS = X_TICKS.map(h => String(Math.floor(h)).padStart(2,"0") + ":00");
+
+function baseLayout(yTitle, y2Title, y2Color) {
+  const layout = {
+    margin: { t: 6, b: 40, l: 52, r: y2Title ? 56 : 16 },
+    xaxis: {
+      range: [0, 24],
+      tickvals: X_TICKS,
+      ticktext: X_TICK_TEXTS,
+      tickfont: { size: 11 },
+      showgrid: true, gridcolor: "#efefef",
+    },
+    yaxis: {
+      title: { text: yTitle, font: { size: 11 } },
+      showgrid: true, gridcolor: "#efefef", zeroline: false,
+    },
+    legend: {
+      orientation: "h", y: -0.18, x: 0.5, xanchor: "center",
+      font: { size: 11 },
+    },
+    plot_bgcolor: "white",
+    paper_bgcolor: "white",
+    height: 300,
+    hovermode: "x unified",
+  };
+  if (y2Title) {
     layout.yaxis2 = {
-      title: { text: yLabel2, font: { color: yColor2 } },
-      overlaying: "y", side: "right", zeroline: false,
-      tickfont: { color: yColor2 },
+      title: { text: y2Title, font: { size: 11, color: y2Color } },
+      overlaying: "y", side: "right",
+      showgrid: false, zeroline: false,
+      tickfont: { color: y2Color },
     };
   }
   return layout;
 }
 
-function makeSeries(rows, key, label, color, lw, dash, yaxis, alpha) {
-  const x  = rows.map(r => r.timeH);
-  const y  = rows.map(r => r[key]);
-  const ys = rollingMean(y, SMOOTH_WINDOW);
-  return [
-    // Raw (faint)
-    {
-      x, y,
-      mode: "lines", name: label + " (raw)",
-      line: { color: color, width: Math.max(lw - 0.8, 0.4), dash },
-      opacity: alpha * 0.18,
-      showlegend: false,
-      yaxis: yaxis || "y",
-      hoverinfo: "skip",
-    },
-    // Smoothed
-    {
-      x, y: ys,
-      mode: "lines", name: label,
-      line: { color: color, width: lw, dash },
-      opacity: alpha,
-      yaxis: yaxis || "y",
-    },
-  ];
+// ─────────────────────────────────────────────
+// FETCH & PRE-COMPUTE SMOOTHED DATA PER DAY
+// ─────────────────────────────────────────────
+async function fetchData() {
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(TAB_NAME)}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const rows = parseCSV(await resp.text());
+
+  // Group rows by date
+  const byDate = {};
+  rows.forEach(row => {
+    const ds = toDateStr(row[COL.timestamp]);
+    if (!ds) return;
+    if (!byDate[ds]) byDate[ds] = [];
+    byDate[ds].push(row);
+  });
+
+  // Pre-compute smoothed x/y per series per day
+  const allKeys = [...Object.keys(COL).filter(k => k !== "timestamp")];
+  Object.entries(byDate).forEach(([ds, dayRows]) => {
+    // Sort rows by time within day
+    dayRows.sort((a, b) => new Date(a[COL.timestamp]) - new Date(b[COL.timestamp]));
+    smoothedByDate[ds] = {};
+    allKeys.forEach(key => {
+      const colName = COL[key];
+      const x = [], y = [];
+      dayRows.forEach(r => {
+        const t = toTimeFloat(r[COL.timestamp]);
+        const v = parseFloat(r[colName]);
+        if (t !== null && !isNaN(v)) { x.push(t); y.push(v); }
+      });
+      const ySm = rollingMean(y, SMOOTH_WINDOW);
+      smoothedByDate[ds][key] = { x, y, ySm };
+    });
+  });
+
+  allDates = Object.keys(smoothedByDate).sort();
+  dayIdx   = allDates.length - 1;
+
+  const latest = new Date(allDates[allDates.length - 1]);
+  calYear  = latest.getFullYear();
+  calMonth = latest.getMonth();
 }
 
 // ─────────────────────────────────────────────
-// BUILD / UPDATE CHARTS
+// BUILD TRACES FROM PRE-COMPUTED DATA
 // ─────────────────────────────────────────────
-let chartsInit = false;
+function tempTracesForDate(dateStr, faint) {
+  const data   = smoothedByDate[dateStr];
+  if (!data) return [];
+  const lw     = faint ? 1.4 : 2.2;
+  const suffix = faint ? " (prev)" : "";
+  const traces = [];
 
-function buildCharts(curr, prev) {
+  TEMP_SERIES.forEach(s => {
+    const d = data[s.key];
+    if (!d || !d.x.length) return;
+    traces.push({
+      x: d.x, y: d.ySm,
+      mode: "lines",
+      line: {
+        color: faint ? hexToRgba(s.color, 0.35) : s.color,
+        width: lw,
+        dash: faint ? "dot" : "solid",
+      },
+      name: s.label + suffix,
+      showlegend: !faint,
+    });
+  });
+  return traces;
+}
 
-  const panels = [
-    {
-      el: "chart-temp",
-      title: "Temperatures",
-      yLabel: "°F",
-      series: [
-        { key: "temp_spa",   label: "Spa Temp",     color: "#d62728", lw: 2.2 },
-        { key: "temp_pool",  label: "Pool Temp",    color: "#1f77b4", lw: 2.2 },
-        { key: "temp_nosun", label: "Water No Sun", color: "#17becf", lw: 2.2 },
-        { key: "temp_out",   label: "Outdoor Temp", color: "#e6a817", lw: 1.8 },
-      ],
-    },
-    {
-      el: "chart-solar",
-      title: "Solar Radiation & UV",
-      yLabel: "W/m²",
-      yLabel2: "UV Index",
-      yColor2: "#b44fd4",
-      series: [
-        { key: "solar", label: "Solar Radiation", color: "#f4a500", lw: 1.8 },
-      ],
-      series2: [
-        { key: "uv", label: "UV Index", color: "#b44fd4", lw: 1.6, dash: "dash", yaxis: "y2" },
-      ],
-    },
-    {
-      el: "chart-wind",
-      title: "Wind Speed & Gusts",
-      yLabel: "mph",
-      series: [
-        { key: "wind_speed", label: "Wind Speed", color: "#2ca02c", lw: 1.8 },
-        { key: "wind_gust",  label: "Wind Gust",  color: "#98df8a", lw: 1.6, dash: "dot" },
-      ],
-    },
-    {
-      el: "chart-humidity",
-      title: "Humidity & VPD",
-      yLabel: "%",
-      yLabel2: "VPD (kPa)",
-      yColor2: "#8c564b",
-      series: [
-        { key: "humidity_out", label: "Outdoor Humidity", color: "#1f77b4", lw: 1.8 },
-        { key: "humidity_in",  label: "Indoor Humidity",  color: "#aec7e8", lw: 1.4, dash: "dot" },
-      ],
-      series2: [
-        { key: "vpd", label: "VPD", color: "#8c564b", lw: 1.6, dash: "dash", yaxis: "y2" },
-      ],
-    },
-  ];
+function solarTracesForDate(dateStr, faint) {
+  const data   = smoothedByDate[dateStr];
+  if (!data) return [];
+  const lw     = faint ? 1.4 : 2.0;
+  const suffix = faint ? " (prev)" : "";
+  const traces = [];
 
-  for (const panel of panels) {
-    const traces = [];
+  const ds = data["solar"];
+  const du = data["uv"];
 
-    // Previous day (faint)
-    if (prev) {
-      for (const s of panel.series || []) {
-        const t = makeSeries(prev, s.key, s.label, s.color, s.lw, s.dash || "solid", s.yaxis, 0.22);
-        t[0].showlegend = false;
-        t[1].name = s.label + " (prev)";
-        t[1].line.dash = "dot";
-        t[1].showlegend = false;
-        traces.push(...t);
-      }
-      for (const s of panel.series2 || []) {
-        const t = makeSeries(prev, s.key, s.label, s.color, s.lw, s.dash || "solid", s.yaxis, 0.22);
-        t[0].showlegend = false;
-        t[1].name = s.label + " (prev)";
-        t[1].line.dash = "dot";
-        t[1].showlegend = false;
-        traces.push(...t);
-      }
-    }
-
-    // Current day
-    for (const s of panel.series || []) {
-      traces.push(...makeSeries(curr, s.key, s.label, s.color, s.lw, s.dash || "solid", s.yaxis, 1.0));
-    }
-    for (const s of panel.series2 || []) {
-      traces.push(...makeSeries(curr, s.key, s.label, s.color, s.lw, s.dash || "solid", s.yaxis, 1.0));
-    }
-
-    const layout = makeLayout(panel.title, panel.yLabel, panel.yLabel2, panel.yColor2);
-    const config = { responsive: true, displayModeBar: false };
-
-    const el = document.getElementById(panel.el);
-    if (!chartsInit) {
-      Plotly.newPlot(el, traces, layout, config);
-    } else {
-      Plotly.react(el, traces, layout, config);
-    }
+  if (ds && ds.x.length) {
+    traces.push({
+      x: ds.x, y: ds.ySm,
+      mode: "lines",
+      line: {
+        color: faint ? hexToRgba("#f4a500", 0.35) : "#f4a500",
+        width: lw, dash: faint ? "dot" : "solid",
+      },
+      name: "Solar (W/m\u00b2)" + suffix,
+      showlegend: !faint,
+      yaxis: "y",
+    });
   }
-
-  chartsInit = true;
+  if (du && du.x.length) {
+    traces.push({
+      x: du.x, y: du.ySm,
+      mode: "lines",
+      line: {
+        color: faint ? hexToRgba("#b44fd4", 0.35) : "#b44fd4",
+        width: faint ? 1.2 : 1.6,
+        dash: faint ? "dot" : "dash",
+      },
+      name: "UV Index" + suffix,
+      showlegend: !faint,
+      yaxis: "y2",
+    });
+  }
+  return traces;
 }
 
 // ─────────────────────────────────────────────
-// DAILY STATS SIDEBAR
+// RENDER
 // ─────────────────────────────────────────────
-function calcStats(rows) {
-  const get = key => rows.map(r => r[key]).filter(v => v !== null);
+function renderCharts() {
+  const currDate = allDates[dayIdx];
+  const prevDate = dayIdx > 0 ? allDates[dayIdx - 1] : null;
 
-  const minMax = key => {
-    const vals = get(key);
-    if (!vals.length) return "—";
-    return `${Math.min(...vals).toFixed(1)} / ${Math.max(...vals).toFixed(1)}`;
-  };
-  const maxVal = key => {
-    const vals = get(key);
-    return vals.length ? Math.max(...vals).toFixed(1) : "—";
-  };
-  const avgVal = key => {
-    const vals = get(key);
-    if (!vals.length) return "—";
-    return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
-  };
+  // Temp chart
+  const tempTraces = [];
+  if (prevDate) tempTraces.push(...tempTracesForDate(prevDate, true));
+  tempTraces.push(...tempTracesForDate(currDate, false));
+  Plotly.react("chart-temp", tempTraces, baseLayout("°F"), { responsive: true });
 
-  return [
-    { label: "Spa Temp (min/max °F)",     val: minMax("temp_spa")   },
-    { label: "Pool Temp (min/max °F)",    val: minMax("temp_pool")  },
-    { label: "Outdoor Temp (min/max °F)", val: minMax("temp_out")   },
-    { label: "Peak Solar (W/m²)",         val: maxVal("solar")      },
-    { label: "Peak UV Index",             val: maxVal("uv")         },
-    { label: "Max Wind Gust (mph)",       val: maxVal("wind_gust")  },
-    { label: "Avg Outdoor Humidity (%)",  val: avgVal("humidity_out")},
-    { label: "Avg VPD (kPa)",            val: avgVal("vpd")        },
-  ];
-}
+  // Solar chart
+  const solarTraces = [];
+  if (prevDate) solarTraces.push(...solarTracesForDate(prevDate, true));
+  solarTraces.push(...solarTracesForDate(currDate, false));
+  Plotly.react("chart-solar", solarTraces,
+    baseLayout("Solar (W/m\u00b2)", "UV Index", "#b44fd4"),
+    { responsive: true });
 
-function renderStats(rows) {
-  const stats = calcStats(rows);
-  const box = document.getElementById("stats-content");
-  box.innerHTML = stats.map(s =>
-    `<div class="stat-row">
-       <span class="stat-label">${s.label}</span>
-       <span class="stat-val">${s.val}</span>
-     </div>`
-  ).join("");
-}
-
-// ─────────────────────────────────────────────
-// SHOW DAY
-// ─────────────────────────────────────────────
-function showDay(idx) {
-  dayIdx = idx;
-  const date     = allDates[idx];
-  const currRows = dateToRows[date] || [];
-  const prevDate = idx > 0 ? allDates[idx - 1] : null;
-  const prevRows = prevDate ? (dateToRows[prevDate] || []) : [];
-
-  buildCharts(currRows, prevRows.length ? prevRows : null);
-  renderStats(currRows);
-  updateDayNav();
-  calendarRender();
-  updateHeaderDate(date);
-}
-
-function updateHeaderDate(date) {
-  const d = new Date(date + "T12:00:00");
-  const label = d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-  document.getElementById("header-date").textContent = label;
-  document.getElementById("day-counter").textContent = `Day ${dayIdx + 1} of ${allDates.length}`;
-}
-
-function updateDayNav() {
+  // UI updates
+  document.getElementById("day-label").textContent =
+    `${currDate}  [${dayIdx + 1} / ${allDates.length}]`;
+  document.getElementById("date-display").textContent = currDate;
   document.getElementById("btn-prev").disabled = dayIdx <= 0;
   document.getElementById("btn-next").disabled = dayIdx >= allDates.length - 1;
+
+  drawCalendar();
+}
+
+// ─────────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────────
+function stepDay(delta) {
+  dayIdx = Math.max(0, Math.min(allDates.length - 1, dayIdx + delta));
+  const d = new Date(allDates[dayIdx]);
+  calYear  = d.getFullYear();
+  calMonth = d.getMonth();
+  renderCharts();
+}
+
+function jumpToDate(dateStr) {
+  const idx = allDates.indexOf(dateStr);
+  if (idx === -1) return;
+  dayIdx = idx;
+  const d = new Date(allDates[dayIdx]);
+  calYear  = d.getFullYear();
+  calMonth = d.getMonth();
+  renderCharts();
 }
 
 // ─────────────────────────────────────────────
 // CALENDAR
 // ─────────────────────────────────────────────
-function calendarRender() {
-  const grid  = document.getElementById("cal-grid");
-  const label = document.getElementById("cal-month-label");
-  label.textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
+function calStep(delta) {
+  calMonth += delta;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  drawCalendar();
+}
 
-  // Day-of-week headers
-  const DOW = ["Mo","Tu","We","Th","Fr","Sa","Su"];
-  let html = DOW.map(d => `<div class="cal-dow">${d}</div>`).join("");
+function drawCalendar() {
+  document.getElementById("cal-month-label").textContent =
+    `${MONTH_NAMES[calMonth]} ${calYear}`;
 
-  // First day of month (0=Sun…6=Sat → shift to Mon-start)
-  const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
-  const startPad = (firstDay + 6) % 7; // Mo=0
-  for (let i = 0; i < startPad; i++) html += `<div class="cal-day empty"></div>`;
+  const grid = document.getElementById("cal-grid");
+  grid.innerHTML = "";
 
+  ["Mo","Tu","We","Th","Fr","Sa","Su"].forEach(d => {
+    const el = document.createElement("div");
+    el.className = "cal-dow";
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDay    = new Date(calYear, calMonth, 1).getDay();
+  const startOffset = (firstDay + 6) % 7;
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const selectedDate = allDates[dayIdx];
+  const availSet    = new Set(allDates);
+  const selectedStr = allDates[dayIdx];
 
-  for (let d = 1; d <= daysInMonth; d++) {
-    const mm  = String(calMonth + 1).padStart(2, "0");
-    const dd  = String(d).padStart(2, "0");
-    const iso = `${calYear}-${mm}-${dd}`;
-    const has = dateSet.has(iso);
-    const sel = iso === selectedDate;
-    const cls = ["cal-day", has ? "has-data" : "", sel ? "selected" : ""].join(" ").trim();
-    const attr = has ? `data-date="${iso}"` : "";
-    html += `<div class="${cls}" ${attr}>${d}</div>`;
+  for (let i = 0; i < startOffset; i++) {
+    const el = document.createElement("div");
+    el.className = "cal-day empty";
+    grid.appendChild(el);
   }
 
-  grid.innerHTML = html;
-
-  // Click handler
-  grid.querySelectorAll(".cal-day.has-data").forEach(el => {
-    el.addEventListener("click", () => {
-      const iso = el.getAttribute("data-date");
-      const idx = allDates.indexOf(iso);
-      if (idx !== -1) showDay(idx);
-    });
-  });
+  for (let d = 1; d <= daysInMonth; d++) {
+    const mm      = String(calMonth + 1).padStart(2, "0");
+    const dd      = String(d).padStart(2, "0");
+    const dateStr = `${calYear}-${mm}-${dd}`;
+    const el      = document.createElement("div");
+    el.textContent = d;
+    el.className = "cal-day";
+    if (availSet.has(dateStr)) {
+      el.classList.add("has-data");
+      if (dateStr === selectedStr) el.classList.add("selected");
+      el.onclick = () => jumpToDate(dateStr);
+    }
+    grid.appendChild(el);
+  }
 }
 
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
-async function init() {
+(async () => {
   try {
-    document.getElementById("loading-msg").textContent = "Fetching weather data…";
-    const csv = await fetchData();
-    document.getElementById("loading-msg").textContent = "Parsing data…";
-    allRows = parseCSV(csv);
-
-    // Group by date
-    dateToRows = {};
-    for (const row of allRows) {
-      if (!dateToRows[row.date]) dateToRows[row.date] = [];
-      dateToRows[row.date].push(row);
-    }
-    allDates = Object.keys(dateToRows).sort();
-    dateSet  = new Set(allDates);
-
-    if (!allDates.length) throw new Error("No valid data rows found.");
-
-    // Start on most recent day
-    dayIdx = allDates.length - 1;
-
-    // Init calendar on latest month
-    const latest = new Date(allDates[allDates.length - 1] + "T12:00:00");
-    calYear  = latest.getFullYear();
-    calMonth = latest.getMonth();
-
-    // Wire up controls
-    document.getElementById("btn-prev").addEventListener("click", () => {
-      if (dayIdx > 0) showDay(dayIdx - 1);
-    });
-    document.getElementById("btn-next").addEventListener("click", () => {
-      if (dayIdx < allDates.length - 1) showDay(dayIdx + 1);
-    });
-    document.getElementById("cal-prev").addEventListener("click", () => {
-      calMonth--;
-      if (calMonth < 0) { calMonth = 11; calYear--; }
-      calendarRender();
-    });
-    document.getElementById("cal-next").addEventListener("click", () => {
-      calMonth++;
-      if (calMonth > 11) { calMonth = 0; calYear++; }
-      calendarRender();
-    });
-
-    // Hide loading
-    document.getElementById("loading-overlay").style.display = "none";
-
-    showDay(dayIdx);
-
-    console.log(`✓ ${allRows.length} rows, ${allDates.length} days (${allDates[0]} → ${allDates[allDates.length - 1]})`);
+    await fetchData();
+    document.getElementById("loading").style.display  = "none";
+    document.getElementById("dashboard").style.display = "block";
+    renderCharts();
   } catch (err) {
-    document.getElementById("loading-msg").textContent = `Error: ${err.message}`;
-    document.querySelector(".spinner").style.display = "none";
-    console.error(err);
+    document.getElementById("loading").innerHTML =
+      `<div style="color:#c00;text-align:center">Failed to load data.<br><small>${err.message}</small></div>`;
   }
-}
-
-init();
+})();
 </script>
 </body>
 </html>
