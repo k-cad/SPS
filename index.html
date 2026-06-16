@@ -13,7 +13,6 @@
     background: #f4f6f9;
     color: #222;
     min-height: 100vh;
-    /* Prevent horizontal scroll on mobile */
     overflow-x: hidden;
   }
 
@@ -45,7 +44,7 @@
     white-space: nowrap;
   }
 
-  /* ── Sticky day-nav bar (below header on mobile) ── */
+  /* ── Sticky day-nav bar ── */
   #day-nav-bar {
     background: white;
     border-bottom: 1px solid #dce2ef;
@@ -54,7 +53,7 @@
     align-items: center;
     gap: 8px;
     position: sticky;
-    top: 46px;   /* height of header */
+    top: 46px;
     z-index: 99;
     box-shadow: 0 1px 4px rgba(0,0,0,0.07);
   }
@@ -69,7 +68,6 @@
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
     white-space: nowrap;
-    /* Bigger tap target on mobile */
     min-height: 40px;
     min-width: 72px;
   }
@@ -84,22 +82,6 @@
     line-height: 1.4;
     font-weight: 600;
   }
-
-  /* ── Sidebar toggle (mobile only) ── */
-  #sidebar-toggle {
-    display: none;
-    background: #1a1a2e;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    min-height: 40px;
-  }
-  #sidebar-toggle:active { background: #2e2e5e; }
 
   /* ── Loading ── */
   #loading {
@@ -129,7 +111,6 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    /* Touch: allow horizontal swipe to be detected */
     touch-action: pan-y;
   }
 
@@ -138,6 +119,7 @@
     border-radius: 8px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     overflow: hidden;
+    position: relative;
   }
   .chart-title {
     padding: 7px 12px 3px;
@@ -147,6 +129,71 @@
     border-bottom: 1px solid #f0f0f0;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* ── Fullscreen button on chart cards ── */
+  .fullscreen-btn {
+    display: none; /* shown only on mobile */
+    background: none;
+    border: 1px solid #cdd5e0;
+    border-radius: 5px;
+    padding: 3px 7px;
+    font-size: 0.7rem;
+    color: #666;
+    cursor: pointer;
+    line-height: 1;
+    white-space: nowrap;
+    min-height: 26px;
+    touch-action: manipulation;
+  }
+  .fullscreen-btn:active { background: #e8f0ff; color: #1f77b4; }
+
+  /* ── Fullscreen overlay ── */
+  #fullscreen-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: white;
+    flex-direction: column;
+  }
+  #fullscreen-overlay.active { display: flex; }
+  #fullscreen-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #1a1a2e;
+    color: white;
+    flex-shrink: 0;
+  }
+  #fullscreen-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: white;
+  }
+  #fullscreen-close {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 1.2rem;
+    padding: 4px 10px;
+    cursor: pointer;
+    min-height: 36px;
+    min-width: 36px;
+  }
+  #fullscreen-chart-container {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+  #fullscreen-chart {
+    width: 100%;
+    height: 100%;
   }
 
   /* ── Sidebar ── */
@@ -157,7 +204,6 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    /* Sidebar sticks while scrolling charts on desktop */
     position: sticky;
     top: 46px;
     max-height: calc(100vh - 46px);
@@ -198,7 +244,6 @@
   .cal-day.has-data {
     background: #cce5ff; color: #003366;
     font-weight: 700; cursor: pointer;
-    /* Minimum tap target */
     min-height: 32px; display: flex;
     align-items: center; justify-content: center;
   }
@@ -253,35 +298,60 @@
     #date-display { font-size: 0.75rem; }
 
     #day-nav-bar { top: 40px; padding: 6px 10px; gap: 6px; }
-    #sidebar-toggle { display: block; }
+
+    /* No sidebar toggle button on mobile — sidebar is always visible at top */
+    #sidebar-toggle-desktop { display: none; }
 
     #main-layout {
       grid-template-columns: 1fr;
+      display: flex;
+      flex-direction: column;
     }
 
-    /* Sidebar collapses to a slide-down panel */
+    /* Sidebar sits ABOVE charts on mobile, always visible, no collapse */
     #sidebar {
+      order: -1; /* Push above charts */
       position: static;
-      max-height: 0;
-      overflow: hidden;
-      padding: 0 10px;
+      max-height: none;
+      overflow-y: visible;
       border-left: none;
-      border-top: 1px solid #dce2ef;
-      transition: max-height 0.3s ease, padding 0.3s ease;
-      background: #eef1f7;
-    }
-    #sidebar.open {
-      max-height: 800px;
+      border-bottom: 2px solid #dce2ef;
       padding: 12px 10px;
     }
 
+    /* Sidebar inner layout: two-column on mobile to save vertical space */
+    #sidebar-top-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    #stats-box {
+      /* stats box beside calendar on mobile */
+    }
+
     /* Charts take full width, shorter on mobile */
-    #charts-col { padding: 6px; gap: 6px; }
+    #charts-col {
+      order: 1;
+      padding: 6px;
+      gap: 6px;
+    }
 
     .chart-title { font-size: 0.72rem; padding: 5px 10px 2px; }
 
+    /* Fullscreen button visible on mobile */
+    .fullscreen-btn { display: inline-flex; align-items: center; gap: 3px; }
+
     /* Swipe hint visible */
     #swipe-hint { display: block; }
+  }
+
+  /* On very narrow screens, stack sidebar sections vertically */
+  @media (max-width: 400px) {
+    #sidebar-top-row {
+      grid-template-columns: 1fr !important;
+    }
   }
 </style>
 </head>
@@ -297,6 +367,17 @@
   <div>Fetching data…</div>
 </div>
 
+<!-- Fullscreen overlay for mobile chart zoom -->
+<div id="fullscreen-overlay">
+  <div id="fullscreen-header">
+    <span id="fullscreen-title">Chart</span>
+    <button id="fullscreen-close" onclick="closeFullscreen()">✕</button>
+  </div>
+  <div id="fullscreen-chart-container">
+    <div id="fullscreen-chart"></div>
+  </div>
+</div>
+
 <div id="dashboard">
 
   <!-- Sticky nav bar -->
@@ -304,55 +385,69 @@
     <button class="nav-btn" id="btn-prev" onclick="stepDay(-1)">◀ Prev</button>
     <div id="day-counter">—</div>
     <button class="nav-btn" id="btn-next" onclick="stepDay(1)">Next ▶</button>
-    <button id="sidebar-toggle" onclick="toggleSidebar()">📅 Stats</button>
   </div>
 
   <div id="main-layout">
 
+    <!-- Sidebar: above charts on mobile, beside on desktop -->
+    <div id="sidebar">
+      <!-- Two-col layout on mobile -->
+      <div id="sidebar-top-row">
+        <div>
+          <div id="cal-header">
+            <button class="cal-nav" onclick="calStep(-1)">◀</button>
+            <span id="cal-month-label">—</span>
+            <button class="cal-nav" onclick="calStep(1)">▶</button>
+          </div>
+          <div id="cal-grid"></div>
+        </div>
+
+        <div id="stats-box">
+          <h3>Daily Summary</h3>
+          <div id="stats-content">—</div>
+        </div>
+      </div>
+
+      <div id="legend-note">
+        Solid = selected day · Dashed = previous day<br>
+        Lines are 60-pt rolling average
+      </div>
+    </div>
+
     <!-- Charts -->
     <div id="charts-col">
       <div id="swipe-hint">← swipe to change day →</div>
+
       <div class="chart-card">
-        <div class="chart-title">Temperatures</div>
+        <div class="chart-title">
+          <span>Temperatures</span>
+          <button class="fullscreen-btn" onclick="openFullscreen('chart-temp','Temperatures')">⛶ Full</button>
+        </div>
         <div id="chart-temp"></div>
       </div>
       <div class="chart-card">
-        <div class="chart-title">Solar Radiation &amp; UV Index</div>
+        <div class="chart-title">
+          <span>Solar Radiation &amp; UV Index</span>
+          <button class="fullscreen-btn" onclick="openFullscreen('chart-solar','Solar Radiation & UV Index')">⛶ Full</button>
+        </div>
         <div id="chart-solar"></div>
       </div>
       <div class="chart-card">
-        <div class="chart-title">Wind Speed &amp; Gusts</div>
+        <div class="chart-title">
+          <span>Wind Speed &amp; Gusts</span>
+          <button class="fullscreen-btn" onclick="openFullscreen('chart-wind','Wind Speed & Gusts')">⛶ Full</button>
+        </div>
         <div id="chart-wind"></div>
       </div>
       <div class="chart-card">
-        <div class="chart-title">Humidity &amp; VPD</div>
+        <div class="chart-title">
+          <span>Humidity &amp; VPD</span>
+          <button class="fullscreen-btn" onclick="openFullscreen('chart-humidity','Humidity & VPD')">⛶ Full</button>
+        </div>
         <div id="chart-humidity"></div>
       </div>
     </div>
 
-    <!-- Sidebar -->
-    <div id="sidebar">
-
-      <div>
-        <div id="cal-header">
-          <button class="cal-nav" onclick="calStep(-1)">◀</button>
-          <span id="cal-month-label">—</span>
-          <button class="cal-nav" onclick="calStep(1)">▶</button>
-        </div>
-        <div id="cal-grid"></div>
-      </div>
-
-      <div id="stats-box">
-        <h3>Daily Summary</h3>
-        <div id="stats-content">—</div>
-      </div>
-
-      <div id="legend-note">
-        Solid = selected day · Faint = previous day<br>
-        Lines are 60-pt rolling average
-      </div>
-
-    </div>
   </div>
 </div>
 
@@ -391,14 +486,17 @@ let dayIdx   = 0;
 let calYear  = 0;
 let calMonth = 0;
 
+// Track current fullscreen chart
+let fullscreenChartId   = null;
+let fullscreenChartData = null; // { traces, layout }
+
 // ─────────────────────────────────────────────
-// TIMESTAMP PARSING — local wall time, no UTC shift
+// TIMESTAMP PARSING
 // ─────────────────────────────────────────────
 function parseTimestamp(str) {
   if (!str) return null;
   str = str.trim().replace(/^"|"$/g, "");
 
-  // M/D/YYYY H:MM:SS [AM/PM]
   let m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})(?:\s*(AM|PM))?/i);
   if (m) {
     let [, mo, dy, yr, hh, mm, ss, ampm] = m;
@@ -410,7 +508,6 @@ function parseTimestamp(str) {
     return { year: +yr, month: +mo, day: +dy, hour: hh, min: mm, sec: ss };
   }
 
-  // YYYY-MM-DD H:MM:SS
   m = str.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/);
   if (m) {
     const [, yr, mo, dy, hh, mm, ss] = m.map(Number);
@@ -487,7 +584,7 @@ function chartHeight() {
 const X_TICKS     = [0,2,4,6,8,10,12,14,16,18,20,22,24];
 const X_TICK_TEXT = X_TICKS.map(h => String(h).padStart(2,"0") + ":00");
 
-function baseLayout(yTitle, y2Title, y2Color) {
+function baseLayout(yTitle, y2Title, y2Color, fullscreen) {
   const mobile = window.innerWidth <= 720;
   const layout = {
     margin: { t: 8, b: mobile ? 32 : 40, l: mobile ? 42 : 50, r: y2Title ? (mobile ? 44 : 52) : 10 },
@@ -509,12 +606,16 @@ function baseLayout(yTitle, y2Title, y2Color) {
       orientation: "h",
       y: 1.08, x: 0,
       font: { size: mobile ? 9 : 10 },
-      bgcolor: "rgba(255,255,255,0.85)",
+      // ── FIX 1: No background on legend ──
+      bgcolor: "rgba(0,0,0,0)",
+      bordercolor: "rgba(0,0,0,0)",
     },
     plot_bgcolor: "white",
     paper_bgcolor: "white",
-    height: chartHeight(),
+    height: fullscreen ? null : chartHeight(),
     hovermode: "x unified",
+    // ── FIX 3: pinch-zoom (dragmode: zoom) and disable box select ──
+    dragmode: "zoom",
   };
   if (y2Title) {
     layout.yaxis2 = {
@@ -524,6 +625,10 @@ function baseLayout(yTitle, y2Title, y2Color) {
       tickfont: { color: y2Color, size: mobile ? 9 : 10 },
       autorange: true,
     };
+  }
+  if (fullscreen) {
+    layout.height = undefined;
+    layout.autosize = true;
   }
   return layout;
 }
@@ -540,24 +645,45 @@ function extractXY(rows, colName) {
   return { x, y };
 }
 
+// ── FIX 2: Previous day rendered with clear visual distinction ──
+// Previous day: dashed line, reduced opacity, no raw scatter behind it
+// Current day: solid line, full opacity, faint raw scatter
 function makeTrace(x, y, label, color, lw, dash, yaxis, faint) {
   const sm = rollingMean(y, SMOOTH_WINDOW);
   const traces = [];
+
   if (!faint) {
+    // Raw data ghost for current day only
     traces.push({
       x, y, mode: "lines",
       line: { color, width: 0.5 },
       opacity: 0.18, showlegend: false, hoverinfo: "skip",
     });
+    // Solid smoothed line for current day
+    traces.push({
+      x, y: sm, mode: "lines",
+      line: { color, width: lw, dash: "solid" },
+      opacity: 1.0,
+      name: label,
+      showlegend: true,
+      yaxis: yaxis || "y",
+    });
+  } else {
+    // Previous day: dashed line, visually distinct but clearly secondary
+    // Use a lighter, desaturated version + "–– prev" suffix
+    traces.push({
+      x, y: sm, mode: "lines",
+      line: {
+        color,
+        width: Math.max(lw - 0.5, 1),
+        dash: "dashdot",
+      },
+      opacity: 0.42,
+      name: label + " ···prev",
+      showlegend: false, // keep legend clean — prev day noted in legend-note
+      yaxis: yaxis || "y",
+    });
   }
-  traces.push({
-    x, y: sm, mode: "lines",
-    line: { color, width: faint ? 1.0 : lw, dash: faint ? "dot" : (dash || "solid") },
-    opacity: faint ? 0.28 : 1.0,
-    name: label + (faint ? " (prev)" : ""),
-    showlegend: !faint,
-    yaxis: yaxis || "y",
-  });
   return traces;
 }
 
@@ -619,7 +745,7 @@ function calcStats(rows) {
     { label: "Peak UV",                 val: peak(COL.uv)            },
     { label: "Max Gust mph",            val: peak(COL.wind_gust)     },
     { label: "Avg Humidity %",          val: avg(COL.humidity_out)   },
-    { label: "Avg VPD kPa",            val: avg(COL.vpd)            },
+    { label: "Avg VPD kPa",             val: avg(COL.vpd)            },
   ];
 }
 
@@ -637,7 +763,19 @@ function renderStats(rows) {
 // RENDER CHARTS
 // ─────────────────────────────────────────────
 const CFG = { responsive: true, displayModeBar: false };
+// Enable zoom via scroll/pinch but no toolbar
+const CFG_FULLSCREEN = {
+  responsive: true,
+  displayModeBar: true,
+  modeBarButtonsToRemove: ['select2d','lasso2d','autoScale2d','hoverCompareCartesian'],
+  displaylogo: false,
+  scrollZoom: true,
+};
+
 let chartsReady = false;
+
+// Store latest traces+layout per chart so we can open fullscreen
+const chartStore = {};
 
 function renderCharts() {
   const curr     = allDates[dayIdx];
@@ -653,6 +791,7 @@ function renderCharts() {
     const layout = baseLayout(y1, y2, y2c);
     chartsReady ? Plotly.react(id, traces, layout, CFG)
                 : Plotly.newPlot(id, traces, layout, CFG);
+    chartStore[id] = { traces, y1, y2, y2c };
   };
 
   build(buildTempTraces,     "chart-temp",     "°F");
@@ -670,7 +809,61 @@ function renderCharts() {
   document.getElementById("btn-next").disabled = dayIdx >= allDates.length - 1;
 
   drawCalendar();
+
+  // Refresh fullscreen chart if open
+  if (fullscreenChartId && chartStore[fullscreenChartId]) {
+    const { traces, y1, y2, y2c } = chartStore[fullscreenChartId];
+    const fsLayout = baseLayout(y1, y2, y2c, true);
+    Plotly.react("fullscreen-chart", traces, fsLayout, CFG_FULLSCREEN);
+  }
 }
+
+// ─────────────────────────────────────────────
+// FULLSCREEN CHART
+// ─────────────────────────────────────────────
+function openFullscreen(chartId, title) {
+  const stored = chartStore[chartId];
+  if (!stored) return;
+
+  fullscreenChartId = chartId;
+
+  document.getElementById("fullscreen-title").textContent = title;
+  const overlay = document.getElementById("fullscreen-overlay");
+  overlay.classList.add("active");
+  document.body.style.overflow = "hidden";
+
+  // Prevent background scroll on iOS
+  overlay.addEventListener("touchmove", preventScroll, { passive: false });
+
+  const { traces, y1, y2, y2c } = stored;
+  const fsLayout = baseLayout(y1, y2, y2c, true);
+  // Override height to fill container
+  fsLayout.height = window.innerHeight - 54; // subtract header height
+  fsLayout.margin.t = 12;
+
+  Plotly.newPlot("fullscreen-chart", traces, fsLayout, CFG_FULLSCREEN);
+}
+
+function closeFullscreen() {
+  fullscreenChartId = null;
+  const overlay = document.getElementById("fullscreen-overlay");
+  overlay.classList.remove("active");
+  document.body.style.overflow = "";
+  overlay.removeEventListener("touchmove", preventScroll);
+  Plotly.purge("fullscreen-chart");
+}
+
+function preventScroll(e) { e.preventDefault(); }
+
+// Close fullscreen on back button / ESC
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && fullscreenChartId) closeFullscreen();
+});
+
+// Handle browser back on mobile
+window.addEventListener("popstate", () => {
+  if (fullscreenChartId) { closeFullscreen(); }
+});
 
 // ─────────────────────────────────────────────
 // NAVIGATION
@@ -692,22 +885,11 @@ function jumpToDate(dateStr) {
 }
 
 // ─────────────────────────────────────────────
-// SIDEBAR TOGGLE (mobile)
-// ─────────────────────────────────────────────
-function toggleSidebar() {
-  const sidebar = document.getElementById("sidebar");
-  sidebar.classList.toggle("open");
-}
-
-// ─────────────────────────────────────────────
 // SWIPE TO CHANGE DAY
 // ─────────────────────────────────────────────
 (function initSwipe() {
   let startX = null;
-  const col = document.getElementById("charts-col");
 
-  // We wait until dashboard is visible before wiring up,
-  // but we can attach to body and check
   document.addEventListener("touchstart", e => {
     startX = e.touches[0].clientX;
   }, { passive: true });
@@ -716,13 +898,12 @@ function toggleSidebar() {
     if (startX === null) return;
     const dx = e.changedTouches[0].clientX - startX;
     startX = null;
-    // Only trigger for meaningful horizontal swipes (>60px)
     if (Math.abs(dx) < 60) return;
-    // Don't trigger if swiping on the calendar or sidebar
     const target = e.target;
     if (target.closest("#sidebar") || target.closest("#cal-grid")) return;
-    if (dx < 0) stepDay(1);   // swipe left → next day
-    else         stepDay(-1);  // swipe right → prev day
+    if (target.closest("#fullscreen-overlay")) return;
+    if (dx < 0) stepDay(1);
+    else         stepDay(-1);
   }, { passive: true });
 })();
 
@@ -769,19 +950,13 @@ function drawCalendar() {
     if (availSet.has(iso)) {
       el.classList.add("has-data");
       if (iso === selected) el.classList.add("selected");
-      el.onclick = () => { jumpToDate(iso); closeSidebarOnMobile(); };
+      el.onclick = () => { jumpToDate(iso); };
     }
     grid.appendChild(el);
   }
 }
 
-function closeSidebarOnMobile() {
-  if (window.innerWidth <= 720) {
-    document.getElementById("sidebar").classList.remove("open");
-  }
-}
-
-// Rerender charts on resize (height changes)
+// Rerender charts on resize
 let resizeTimer;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
