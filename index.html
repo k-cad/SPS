@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SPS Temp Dashboard</title>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <style>
@@ -114,7 +114,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    touch-action: pan-y;
+    width: 100%; /* Force full width */
+    /* touch-action: pan-y; <- Removed to allow pinch-to-zoom */
   }
 
   .chart-card {
@@ -123,6 +124,7 @@
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     overflow: hidden;
     position: relative;
+    width: 100%; /* Force full width */
   }
   .chart-title {
     padding: 7px 12px 3px;
@@ -359,7 +361,6 @@
   <div>Fetching data…</div>
 </div>
 
-<!-- Fullscreen overlay for mobile chart zoom -->
 <div id="fullscreen-overlay">
   <div id="fullscreen-header">
     <span id="fullscreen-title">Chart</span>
@@ -372,7 +373,6 @@
 
 <div id="dashboard">
 
-  <!-- Sticky nav bar -->
   <div id="day-nav-bar">
     <button class="nav-btn" id="btn-prev" onclick="stepDay(-1)">◀ Prev</button>
     <div id="day-counter">—</div>
@@ -381,16 +381,13 @@
 
   <div id="main-layout">
 
-    <!-- Sidebar: above charts on mobile, right column on desktop -->
     <div id="sidebar">
       <div id="sidebar-top-row">
-        <!-- Stats first (shows at top on mobile) -->
         <div id="stats-box">
           <h3>Daily Summary</h3>
           <div id="stats-content">—</div>
         </div>
 
-        <!-- Calendar below stats on mobile, below stats on desktop too -->
         <div id="cal-wrap">
           <div id="cal-header">
             <button class="cal-nav" onclick="calStep(-1)">◀</button>
@@ -407,7 +404,6 @@
       </div>
     </div>
 
-    <!-- Charts -->
     <div id="charts-col">
       <div id="swipe-hint">← swipe to change day →</div>
 
@@ -580,6 +576,7 @@ const X_TICK_TEXT = X_TICKS.map(h => String(h).padStart(2,"0") + ":00");
 function baseLayout(yTitle, y2Title, y2Color, fullscreen) {
   const mobile = window.innerWidth <= 720;
   const layout = {
+    autosize: true, // Added to allow aggressive expanding to CSS bounds
     margin: { t: 8, b: mobile ? 32 : 40, l: mobile ? 42 : 50, r: y2Title ? (mobile ? 44 : 52) : 10 },
     xaxis: {
       range: [0, 24],
