@@ -114,8 +114,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: 100%; /* Force full width */
-    /* touch-action: pan-y; <- Removed to allow pinch-to-zoom */
+    width: 100%;
   }
 
   .chart-card {
@@ -124,7 +123,7 @@
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     overflow: hidden;
     position: relative;
-    width: 100%; /* Force full width */
+    width: 100%;
   }
   .chart-title {
     padding: 7px 12px 3px;
@@ -304,13 +303,16 @@
 
     #day-nav-bar { top: 40px; padding: 6px 10px; gap: 6px; }
 
-    /* Single column, sidebar floats above charts */
+    /* Force EVERYTHING in the layout to expand horizontally */
+    #dashboard { width: 100%; }
+    
     #main-layout {
       display: flex;
       flex-direction: column;
+      align-items: stretch; 
+      width: 100%; 
     }
 
-    /* Sidebar: always visible above charts, no sticky, no collapse */
     #sidebar {
       grid-column: unset;
       grid-row: unset;
@@ -321,13 +323,19 @@
       border-left: none;
       border-bottom: 2px solid #dce2ef;
       padding: 12px 10px;
+      width: 100%; 
     }
 
-    /* Sidebar inner layout: vertical stack — stats first, then calendar */
     #sidebar-top-row {
       display: flex;
       flex-direction: column;
+      align-items: stretch;
       gap: 12px;
+      width: 100%; 
+    }
+
+    #stats-box, #cal-wrap, #cal-grid, #legend-note {
+      width: 100%; 
     }
 
     /* Charts below sidebar */
@@ -337,14 +345,13 @@
       order: 1;
       padding: 6px;
       gap: 6px;
+      width: 100%;
     }
 
     .chart-title { font-size: 0.72rem; padding: 5px 10px 2px; }
 
-    /* Fullscreen button visible on mobile */
     .fullscreen-btn { display: inline-flex; align-items: center; gap: 3px; }
 
-    /* Swipe hint visible */
     #swipe-hint { display: block; }
   }
 </style>
@@ -352,7 +359,7 @@
 <body>
 
 <header>
-  <h1>🌤 SPS Dashboard v3</h1>
+  <h1>🌤 SPS Dashboard v4</h1>
   <div id="date-display">Loading…</div>
 </header>
 
@@ -477,7 +484,7 @@ let calMonth = 0;
 
 // Track current fullscreen chart
 let fullscreenChartId   = null;
-let fullscreenChartData = null; // { traces, layout }
+let fullscreenChartData = null; 
 
 // ─────────────────────────────────────────────
 // TIMESTAMP PARSING
@@ -576,7 +583,7 @@ const X_TICK_TEXT = X_TICKS.map(h => String(h).padStart(2,"0") + ":00");
 function baseLayout(yTitle, y2Title, y2Color, fullscreen) {
   const mobile = window.innerWidth <= 720;
   const layout = {
-    autosize: true, // Added to allow aggressive expanding to CSS bounds
+    autosize: true, 
     margin: { t: 8, b: mobile ? 32 : 40, l: mobile ? 42 : 50, r: y2Title ? (mobile ? 44 : 52) : 10 },
     xaxis: {
       range: [0, 24],
@@ -596,7 +603,6 @@ function baseLayout(yTitle, y2Title, y2Color, fullscreen) {
       orientation: "h",
       y: 1.08, x: 0,
       font: { size: mobile ? 9 : 10 },
-      // ── FIX 1: No background on legend ──
       bgcolor: "rgba(0,0,0,0)",
       bordercolor: "rgba(0,0,0,0)",
     },
@@ -604,7 +610,7 @@ function baseLayout(yTitle, y2Title, y2Color, fullscreen) {
     paper_bgcolor: "white",
     height: fullscreen ? null : chartHeight(),
     hovermode: "x unified",
-    dragmode: isMobile() ? "pan" : "zoom",
+    dragmode: mobile ? "pan" : "zoom",
   };
   if (y2Title) {
     layout.yaxis2 = {
@@ -634,21 +640,16 @@ function extractXY(rows, colName) {
   return { x, y };
 }
 
-// ── FIX 2: Previous day rendered with clear visual distinction ──
-// Previous day: dashed line, reduced opacity, no raw scatter behind it
-// Current day: solid line, full opacity, faint raw scatter
 function makeTrace(x, y, label, color, lw, dash, yaxis, faint) {
   const sm = rollingMean(y, SMOOTH_WINDOW);
   const traces = [];
 
   if (!faint) {
-    // Raw data ghost for current day only
     traces.push({
       x, y, mode: "lines",
       line: { color, width: 0.5 },
       opacity: 0.18, showlegend: false, hoverinfo: "skip",
     });
-    // Solid smoothed line for current day
     traces.push({
       x, y: sm, mode: "lines",
       line: { color, width: lw, dash: "solid" },
@@ -658,8 +659,6 @@ function makeTrace(x, y, label, color, lw, dash, yaxis, faint) {
       yaxis: yaxis || "y",
     });
   } else {
-    // Previous day: dashed line, visually distinct but clearly secondary
-    // Use a lighter, desaturated version + "–– prev" suffix
     traces.push({
       x, y: sm, mode: "lines",
       line: {
@@ -669,7 +668,7 @@ function makeTrace(x, y, label, color, lw, dash, yaxis, faint) {
       },
       opacity: 0.42,
       name: label + " ···prev",
-      showlegend: false, // keep legend clean — prev day noted in legend-note
+      showlegend: false,
       yaxis: yaxis || "y",
     });
   }
@@ -749,20 +748,12 @@ function renderStats(rows) {
 }
 
 // ─────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────
-function isMobile() { return window.innerWidth <= 720; }
-
-// ─────────────────────────────────────────────
 // RENDER CHARTS
 // ─────────────────────────────────────────────
-// scrollZoom: true enables pinch-to-zoom on touch devices.
-// displayModeBar: false hides the toolbar (which has box-select by default).
-// dragmode is set to 'pan' on mobile in the layout so finger drags pan, not box-select.
 const CFG = {
   responsive: true,
   displayModeBar: false,
-  scrollZoom: true,         // enables pinch-zoom on touch
+  scrollZoom: true,
 };
 
 const CFG_FULLSCREEN = {
@@ -774,8 +765,6 @@ const CFG_FULLSCREEN = {
 };
 
 let chartsReady = false;
-
-// Store latest traces+layout per chart so we can open fullscreen
 const chartStore = {};
 
 function renderCharts() {
@@ -811,7 +800,6 @@ function renderCharts() {
 
   drawCalendar();
 
-  // Refresh fullscreen chart if open
   if (fullscreenChartId && chartStore[fullscreenChartId]) {
     const { traces, y1, y2, y2c } = chartStore[fullscreenChartId];
     const fsLayout = baseLayout(y1, y2, y2c, true);
@@ -833,13 +821,11 @@ function openFullscreen(chartId, title) {
   overlay.classList.add("active");
   document.body.style.overflow = "hidden";
 
-  // Prevent background scroll on iOS
   overlay.addEventListener("touchmove", preventScroll, { passive: false });
 
   const { traces, y1, y2, y2c } = stored;
   const fsLayout = baseLayout(y1, y2, y2c, true);
-  // Override height to fill container
-  fsLayout.height = window.innerHeight - 54; // subtract header height
+  fsLayout.height = window.innerHeight - 54; 
   fsLayout.margin.t = 12;
 
   Plotly.newPlot("fullscreen-chart", traces, fsLayout, CFG_FULLSCREEN);
@@ -856,12 +842,10 @@ function closeFullscreen() {
 
 function preventScroll(e) { e.preventDefault(); }
 
-// Close fullscreen on back button / ESC
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && fullscreenChartId) closeFullscreen();
 });
 
-// Handle browser back on mobile
 window.addEventListener("popstate", () => {
   if (fullscreenChartId) { closeFullscreen(); }
 });
