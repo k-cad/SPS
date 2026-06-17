@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SPS Temp Dashboard</title>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <style>
@@ -58,7 +58,7 @@
     box-shadow: 0 1px 4px rgba(0,0,0,0.07);
   }
   .nav-btn {
-    padding: 8px 14px;
+    padding: 8px 10px;
     border: 1.5px solid #1f77b4;
     border-radius: 6px;
     background: white;
@@ -69,11 +69,23 @@
     transition: background 0.12s, color 0.12s;
     white-space: nowrap;
     min-height: 40px;
-    min-width: 72px;
   }
   .nav-btn:hover, .nav-btn:active { background: #1f77b4; color: white; }
   .nav-btn:disabled { opacity: 0.3; cursor: default; }
   .nav-btn:disabled:hover, .nav-btn:disabled:active { background: white; color: #1f77b4; }
+  
+  #span-select {
+    padding: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 6px;
+    border: 1.5px solid #1f77b4;
+    color: #1f77b4;
+    background: white;
+    cursor: pointer;
+    outline: none;
+  }
+
   #day-counter {
     font-size: 0.78rem;
     color: #555;
@@ -104,7 +116,6 @@
     grid-template-columns: 1fr 240px;
     align-items: start;
   }
-  /* Sidebar always occupies column 2 on desktop regardless of DOM order */
   #sidebar    { grid-column: 2; grid-row: 1; }
   #charts-col { grid-column: 1; grid-row: 1; }
 
@@ -140,7 +151,7 @@
 
   /* ── Fullscreen button on chart cards ── */
   .fullscreen-btn {
-    display: none; /* shown only on mobile */
+    display: none;
     background: none;
     border: 1px solid #cdd5e0;
     border-radius: 5px;
@@ -303,7 +314,6 @@
 
     #day-nav-bar { top: 40px; padding: 6px 10px; gap: 6px; }
 
-    /* Force EVERYTHING in the layout to expand horizontally */
     #dashboard { width: 100%; }
     
     #main-layout {
@@ -338,7 +348,6 @@
       width: 100%; 
     }
 
-    /* Charts below sidebar */
     #charts-col {
       grid-column: unset;
       grid-row: unset;
@@ -359,7 +368,7 @@
 <body>
 
 <header>
-  <h1>🌤 SPS Dashboard v4</h1>
+  <h1>🌤 SPS Dashboard v5</h1>
   <div id="date-display">Loading…</div>
 </header>
 
@@ -381,9 +390,15 @@
 <div id="dashboard">
 
   <div id="day-nav-bar">
-    <button class="nav-btn" id="btn-prev" onclick="stepDay(-1)">◀ Prev</button>
+    <button class="nav-btn" id="btn-prev" onclick="stepDay(-1)">◀</button>
+    <select id="span-select" onchange="changeSpan(this.value)">
+      <option value="1">1 Day</option>
+      <option value="3">3 Days</option>
+      <option value="7">7 Days</option>
+      <option value="30">30 Days</option>
+    </select>
     <div id="day-counter">—</div>
-    <button class="nav-btn" id="btn-next" onclick="stepDay(1)">Next ▶</button>
+    <button class="nav-btn" id="btn-next" onclick="stepDay(1)">▶</button>
   </div>
 
   <div id="main-layout">
@@ -391,7 +406,7 @@
     <div id="sidebar">
       <div id="sidebar-top-row">
         <div id="stats-box">
-          <h3>Daily Summary</h3>
+          <h3 id="stats-title">Daily Summary</h3>
           <div id="stats-content">—</div>
         </div>
 
@@ -481,8 +496,8 @@ let allDates = [];
 let dayIdx   = 0;
 let calYear  = 0;
 let calMonth = 0;
+let currentSpan = 1;
 
-// Track current fullscreen chart
 let fullscreenChartId   = null;
 let fullscreenChartData = null; 
 
@@ -580,12 +595,17 @@ function chartHeight() {
 const X_TICKS     = [0,2,4,6,8,10,12,14,16,18,20,22,24];
 const X_TICK_TEXT = X_TICKS.map(h => String(h).padStart(2,"0") + ":00");
 
-function baseLayout(yTitle, y2Title, y2Color, fullscreen) {
+function baseLayout(yTitle, y2Title, y2Color, fullscreen, useAbsolute, customHeight) {
   const mobile = window.innerWidth <= 720;
   const layout = {
     autosize: true, 
     margin: { t: 8, b: mobile ? 32 : 40, l: mobile ? 42 : 50, r: y2Title ? (mobile ? 44 : 52) : 10 },
-    xaxis: {
+    xaxis: useAbsolute ? {
+      type: 'date',
+      showgrid: true, gridcolor: "#efefef",
+      title: { text: "Date & Time", font: { size: mobile ? 9 : 10 }, standoff: 2 },
+      tickfont: { size: mobile ? 9 : 10 }
+    } : {
       range: [0, 24],
       tickvals: mobile ? [0,4,8,12,16,20,24] : X_TICKS,
       ticktext: mobile ? ["0:00","4:00","8:00","12:00","16:00","20:00","24:00"] : X_TICK_TEXT,
@@ -608,9 +628,9 @@ function baseLayout(yTitle, y2Title, y2Color, fullscreen) {
     },
     plot_bgcolor: "white",
     paper_bgcolor: "white",
-    height: fullscreen ? null : chartHeight(),
+    height: fullscreen ? null : (customHeight || chartHeight()),
     hovermode: "x unified",
-    dragmode: mobile ? "pan" : "zoom",
+    dragmode: "zoom", // Allow native pinch zoom instead of pan
   };
   if (y2Title) {
     layout.yaxis2 = {
@@ -631,11 +651,14 @@ function baseLayout(yTitle, y2Title, y2Color, fullscreen) {
 // ─────────────────────────────────────────────
 // TRACE BUILDERS
 // ─────────────────────────────────────────────
-function extractXY(rows, colName) {
+function extractXY(rows, colName, useAbsolute) {
   const x = [], y = [];
   for (const r of rows) {
     const v = parseFloat(r[colName]);
-    if (r._timeFloat !== null && !isNaN(v)) { x.push(r._timeFloat); y.push(v); }
+    if (!isNaN(v)) {
+      x.push(useAbsolute ? r._absTimeStr : r._timeFloat);
+      y.push(v);
+    }
   }
   return { x, y };
 }
@@ -675,7 +698,7 @@ function makeTrace(x, y, label, color, lw, dash, yaxis, faint) {
   return traces;
 }
 
-function buildTempTraces(rows, faint) {
+function buildTempTraces(rows, faint, useAbsolute) {
   const series = [
     { key: COL.temp_spa,   label: "Spa Temp",     color: "#d62728" },
     { key: COL.temp_pool,  label: "Pool Temp",    color: "#1f77b4" },
@@ -683,33 +706,33 @@ function buildTempTraces(rows, faint) {
     { key: COL.temp_out,   label: "Outdoor Temp", color: "#e6a817" },
   ];
   return series.flatMap(s => {
-    const { x, y } = extractXY(rows, s.key);
+    const { x, y } = extractXY(rows, s.key, useAbsolute);
     return makeTrace(x, y, s.label, s.color, 2.0, "solid", "y", faint);
   });
 }
 
-function buildSolarTraces(rows, faint) {
-  const { x: xs, y: ys } = extractXY(rows, COL.solar);
-  const { x: xu, y: yu } = extractXY(rows, COL.uv);
+function buildSolarTraces(rows, faint, useAbsolute) {
+  const { x: xs, y: ys } = extractXY(rows, COL.solar, useAbsolute);
+  const { x: xu, y: yu } = extractXY(rows, COL.uv, useAbsolute);
   return [
     ...makeTrace(xs, ys, "Solar (W/m²)", "#f4a500", 1.8, "solid", "y",  faint),
     ...makeTrace(xu, yu, "UV Index",     "#b44fd4", 1.5, "dash",  "y2", faint),
   ];
 }
 
-function buildWindTraces(rows, faint) {
-  const { x: xs, y: ys } = extractXY(rows, COL.wind_speed);
-  const { x: xg, y: yg } = extractXY(rows, COL.wind_gust);
+function buildWindTraces(rows, faint, useAbsolute) {
+  const { x: xs, y: ys } = extractXY(rows, COL.wind_speed, useAbsolute);
+  const { x: xg, y: yg } = extractXY(rows, COL.wind_gust, useAbsolute);
   return [
     ...makeTrace(xs, ys, "Wind Speed", "#2ca02c", 1.8, "solid", "y", faint),
     ...makeTrace(xg, yg, "Wind Gust",  "#98df8a", 1.4, "dot",   "y", faint),
   ];
 }
 
-function buildHumidityTraces(rows, faint) {
-  const { x: xo, y: yo } = extractXY(rows, COL.humidity_out);
-  const { x: xi, y: yi } = extractXY(rows, COL.humidity_in);
-  const { x: xv, y: yv } = extractXY(rows, COL.vpd);
+function buildHumidityTraces(rows, faint, useAbsolute) {
+  const { x: xo, y: yo } = extractXY(rows, COL.humidity_out, useAbsolute);
+  const { x: xi, y: yi } = extractXY(rows, COL.humidity_in, useAbsolute);
+  const { x: xv, y: yv } = extractXY(rows, COL.vpd, useAbsolute);
   return [
     ...makeTrace(xo, yo, "Outdoor Humidity", "#1f77b4", 1.8, "solid", "y",  faint),
     ...makeTrace(xi, yi, "Indoor Humidity",  "#aec7e8", 1.3, "dot",   "y",  faint),
@@ -737,7 +760,8 @@ function calcStats(rows) {
   ];
 }
 
-function renderStats(rows) {
+function renderStats(rows, useAbsolute) {
+  document.getElementById("stats-title").textContent = useAbsolute ? `Summary (${currentSpan} Days)` : `Daily Summary`;
   document.getElementById("stats-content").innerHTML =
     calcStats(rows).map(s =>
       `<div class="stat-row">
@@ -768,41 +792,63 @@ let chartsReady = false;
 const chartStore = {};
 
 function renderCharts() {
-  const curr     = allDates[dayIdx];
-  const prev     = dayIdx > 0 ? allDates[dayIdx - 1] : null;
-  const currRows = allData[curr] || [];
-  const prevRows = prev ? (allData[prev] || []) : [];
+  const useAbsolute = currentSpan > 1;
+  const curr = allDates[dayIdx];
+  let currRows = [];
+  let prevRows = [];
 
-  const build = (fn, id, y1, y2, y2c) => {
-    const traces = [
-      ...(prevRows.length ? fn(prevRows, true) : []),
-      ...fn(currRows, false),
-    ];
-    const layout = baseLayout(y1, y2, y2c);
+  // Group rows depending on selected timespan
+  if (useAbsolute) {
+    const startIndex = Math.max(0, dayIdx - currentSpan + 1);
+    for (let i = startIndex; i <= dayIdx; i++) {
+      currRows.push(...(allData[allDates[i]] || []));
+    }
+  } else {
+    const prev = dayIdx > 0 ? allDates[dayIdx - 1] : null;
+    currRows = allData[curr] || [];
+    prevRows = prev ? (allData[prev] || []) : [];
+  }
+
+  const build = (fn, id, y1, y2, y2c, customHeight) => {
+    const traces = [];
+    if (!useAbsolute && prevRows.length) {
+      traces.push(...fn(prevRows, true, false));
+    }
+    traces.push(...fn(currRows, false, useAbsolute));
+
+    const layout = baseLayout(y1, y2, y2c, false, useAbsolute, customHeight);
     chartsReady ? Plotly.react(id, traces, layout, CFG)
                 : Plotly.newPlot(id, traces, layout, CFG);
-    chartStore[id] = { traces, y1, y2, y2c };
+    chartStore[id] = { traces, y1, y2, y2c, useAbsolute };
   };
 
-  build(buildTempTraces,     "chart-temp",     "°F");
+  const mobile = window.innerWidth <= 720;
+  
+  // Make the temp chart much larger
+  build(buildTempTraces,     "chart-temp",     "°F", null, null, mobile ? 450 : 600);
+  
+  // Keep the other charts standard height
   build(buildSolarTraces,    "chart-solar",    "W/m²",  "UV Index",  "#b44fd4");
   build(buildWindTraces,     "chart-wind",     "mph");
   build(buildHumidityTraces, "chart-humidity", "%",     "VPD (kPa)", "#8c564b");
+  
   chartsReady = true;
 
-  renderStats(currRows);
+  renderStats(currRows, useAbsolute);
 
   const display = tsToDisplayDate(curr);
-  document.getElementById("date-display").textContent  = display;
+  document.getElementById("date-display").textContent  = useAbsolute ? `Viewing ${currentSpan} Days` : display;
   document.getElementById("day-counter").textContent   = `${curr}  [${dayIdx+1}/${allDates.length}]`;
   document.getElementById("btn-prev").disabled = dayIdx <= 0;
   document.getElementById("btn-next").disabled = dayIdx >= allDates.length - 1;
 
+  document.getElementById("legend-note").style.display = useAbsolute ? "none" : "block";
+
   drawCalendar();
 
   if (fullscreenChartId && chartStore[fullscreenChartId]) {
-    const { traces, y1, y2, y2c } = chartStore[fullscreenChartId];
-    const fsLayout = baseLayout(y1, y2, y2c, true);
+    const { traces, y1, y2, y2c, useAbsolute: fsAbs } = chartStore[fullscreenChartId];
+    const fsLayout = baseLayout(y1, y2, y2c, true, fsAbs);
     Plotly.react("fullscreen-chart", traces, fsLayout, CFG_FULLSCREEN);
   }
 }
@@ -823,8 +869,8 @@ function openFullscreen(chartId, title) {
 
   overlay.addEventListener("touchmove", preventScroll, { passive: false });
 
-  const { traces, y1, y2, y2c } = stored;
-  const fsLayout = baseLayout(y1, y2, y2c, true);
+  const { traces, y1, y2, y2c, useAbsolute } = stored;
+  const fsLayout = baseLayout(y1, y2, y2c, true, useAbsolute);
   fsLayout.height = window.innerHeight - 54; 
   fsLayout.margin.t = 12;
 
@@ -866,6 +912,11 @@ function jumpToDate(dateStr) {
   dayIdx = idx;
   const [y, m] = dateStr.split("-").map(Number);
   calYear = y; calMonth = m - 1;
+  renderCharts();
+}
+
+function changeSpan(val) {
+  currentSpan = parseInt(val, 10);
   renderCharts();
 }
 
@@ -964,6 +1015,9 @@ window.addEventListener("resize", () => {
       row._ts        = ts;
       row._dateStr   = tsToDateStr(ts);
       row._timeFloat = tsToTimeFloat(ts);
+      // Create a formatted string for continuous X-axis plotting
+      row._absTimeStr = `${ts.year}-${String(ts.month).padStart(2,"0")}-${String(ts.day).padStart(2,"0")} ${String(ts.hour).padStart(2,"0")}:${String(ts.min).padStart(2,"0")}:${String(ts.sec).padStart(2,"0")}`;
+      
       if (!allData[row._dateStr]) allData[row._dateStr] = [];
       allData[row._dateStr].push(row);
     }
